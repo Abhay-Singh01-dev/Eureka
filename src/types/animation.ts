@@ -80,6 +80,8 @@ export interface GeneratedSceneContent {
   visual_elements?: ManimElement[];
   /** Manim-inspired animation sequence instructions */
   manim_sequence?: ManimInstruction[];
+  /** Narration segments produced by Phase 6 refinement */
+  narration_segments?: NarrationSegment[];
 }
 
 // ── Manim-style Visual Primitives ────────────────────────────

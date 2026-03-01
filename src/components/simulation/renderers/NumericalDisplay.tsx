@@ -255,10 +255,15 @@ const NumericalDisplay: FC<RendererProps> = ({
         }
       }
 
-      // Get min/max for gauge from the matching variable definition
-      const varDef = Object.entries(state.variables);
+      // Get min/max for gauge — derive from initial state or a sensible default
+      const initialVal = model.initial_state?.[d.variable] ?? 0;
+      const absMax = Math.max(Math.abs(value), Math.abs(initialVal), 1);
       const min = 0;
-      const max = value * 2 || 100;
+      // Set gauge max to the nearest "nice" ceiling above current and initial values
+      const max =
+        Math.ceil(
+          (absMax * 1.5) / Math.pow(10, Math.floor(Math.log10(absMax))),
+        ) * Math.pow(10, Math.floor(Math.log10(absMax))) || 100;
 
       return { ...d, value, color, min, max };
     });

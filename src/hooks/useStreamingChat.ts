@@ -218,10 +218,12 @@ export function useStreamingChat({
       setIsStreaming(true);
 
       // Build history from existing messages (via ref to avoid stale closures)
-      const history: ChatHistoryItem[] = messagesRef.current
+      // Cap to last 20 messages to avoid URL length limits
+      const allHistory: ChatHistoryItem[] = messagesRef.current
         .filter((m) => !m.isStreaming)
         .map((m) => ({ role: m.role, content: m.content }));
-      history.push({ role: "user", content: userMessage.trim() });
+      allHistory.push({ role: "user", content: userMessage.trim() });
+      const history = allHistory.slice(-20);
 
       const params = new URLSearchParams({
         message: userMessage.trim(),

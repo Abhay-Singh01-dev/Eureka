@@ -6,15 +6,7 @@ import React, {
   type FC,
 } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import {
-  Send,
-  Camera,
-  Paperclip,
-  PenTool,
-  FlaskConical,
-  X,
-  Edit2,
-} from "lucide-react";
+import { Send, PenTool, FlaskConical, X, Edit2 } from "lucide-react";
 import VoiceButton from "@/components/ui/VoiceButton";
 import EquationBuilder from "./EquationBuilder";
 import ChemistryBuilder from "./ChemistryBuilder";
@@ -47,7 +39,6 @@ const InputBox: FC<InputBoxProps> = ({
     latex: "",
   });
   const textareaRef = useRef<HTMLTextAreaElement | null>(null);
-  const fileInputRef = useRef<HTMLInputElement | null>(null);
 
   const handleSubmit = (e?: React.FormEvent<HTMLFormElement>) => {
     e?.preventDefault();
@@ -178,15 +169,6 @@ const InputBox: FC<InputBoxProps> = ({
             />
             <button
               type="button"
-              onClick={() => fileInputRef.current?.click()}
-              disabled={isLoading}
-              className="w-10 h-10 rounded-full flex items-center justify-center text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-700/50 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
-              aria-label="Upload image"
-            >
-              <Camera className="w-5 h-5" />
-            </button>
-            <button
-              type="button"
               onClick={() => setShowEquationBuilder(true)}
               disabled={isLoading}
               className="bg-slate-50 text-gray-600 px-3 text-sm font-medium rounded-full flex items-center gap-1.5 h-10 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700/50 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
@@ -205,14 +187,6 @@ const InputBox: FC<InputBoxProps> = ({
             >
               <FlaskConical className="w-4 h-4" />
               <span className="hidden sm:inline">Chem</span>
-            </button>
-            <button
-              type="button"
-              disabled={isLoading}
-              className="w-10 h-10 rounded-full flex items-center justify-center text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-700/50 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
-              aria-label="Attach file"
-            >
-              <Paperclip className="w-5 h-5" />
             </button>
           </div>
 
@@ -239,12 +213,6 @@ const InputBox: FC<InputBoxProps> = ({
           </motion.button>
         </div>
       </div>
-      <input
-        ref={fileInputRef}
-        type="file"
-        accept="image/*"
-        className="hidden"
-      />
     </form>
   );
 

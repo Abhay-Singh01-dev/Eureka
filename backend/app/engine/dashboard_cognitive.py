@@ -54,10 +54,25 @@ from app.engine.dashboard_depth_controller import DepthController
 
 _MONGO_URI = os.getenv("MONGO_URI", "mongodb://localhost:27017")
 _MONGO_DB = os.getenv("MONGO_DB", "eureka")
-_client: MongoClient = MongoClient(_MONGO_URI)
-_db = _client[_MONGO_DB]
-_profiles = _db["user_profiles"]
-_conv_state = _db["dashboard_conv_state"]
+_client: Optional[MongoClient] = None
+_db_ref = None
+
+
+def _get_db():
+    """Lazy-load MongoDB connection to avoid blocking at import time."""
+    global _client, _db_ref
+    if _db_ref is None:
+        _client = MongoClient(_MONGO_URI)
+        _db_ref = _client[_MONGO_DB]
+    return _db_ref
+
+
+def _profiles():
+    return _get_db()["user_profiles"]
+
+
+def _conv_state():
+    return _get_db()["dashboard_conv_state"]
 
 # ── EMA constant ─────────────────────────────────────────────────────────
 # α = 0.1 → very smooth, requires ~10+ messages to shift significantly
@@ -89,7 +104,7 @@ def get_or_create_profile(user_id: str) -> Dict:
     if not user_id:
         return {**DEFAULT_PROFILE, "user_id": "anonymous"}
 
-    doc = _profiles.find_one({"user_id": user_id})
+    doc = _profiles().find_one({"user_id": user_id})
     if doc:
         doc.pop("_id", None)
         return doc
@@ -101,7 +116,7 @@ def get_or_create_profile(user_id: str) -> Dict:
         "created_at": datetime.now(timezone.utc),
         "updated_at": datetime.now(timezone.utc),
     }
-    _profiles.insert_one(profile)
+    _profiles().insert_one(profile)
     profile.pop("_id", None)
     return profile
 
@@ -211,7 +226,7 @@ def update_profile_ema(
             "updated_at": datetime.now(timezone.utc),
         }
     }
-    _profiles.update_one({"user_id": user_id}, update_doc)
+    _profiles().update_one({"user_id": user_id}, update_doc)
 
     updated = get_or_create_profile(user_id)
     return updated
@@ -262,7 +277,7 @@ def get_or_create_conv_state(
       - Low precision → start at depth 2
       - Otherwise → depth 3
     """
-    doc = _conv_state.find_one({"conversation_id": conversation_id})
+    doc = _conv_state().find_one({"conversation_id": conversation_id})
     if doc:
         doc.pop("_id", None)
         return doc
@@ -278,7 +293,7 @@ def get_or_create_conv_state(
         "created_at": datetime.now(timezone.utc),
         "updated_at": datetime.now(timezone.utc),
     }
-    _conv_state.insert_one(state)
+    _conv_state().insert_one(state)
     state.pop("_id", None)
     return state
 
@@ -302,7 +317,7 @@ def update_conv_state(
       - Energy level tracking
       - Statement log for consistency tracking (context-aware)
     """
-    state = _conv_state.find_one({"conversation_id": conversation_id})
+    state = _conv_state().find_one({"conversation_id": conversation_id})
     if not state:
         return DEFAULT_CONV_STATE
 
@@ -376,9 +391,9 @@ def update_conv_state(
             "updated_at": datetime.now(timezone.utc),
         }
     }
-    _conv_state.update_one({"conversation_id": conversation_id}, update_doc)
+    _conv_state().update_one({"conversation_id": conversation_id}, update_doc)
 
-    updated = _conv_state.find_one({"conversation_id": conversation_id})
+    updated = _conv_state().find_one({"conversation_id": conversation_id})
     if updated:
         updated.pop("_id", None)
     return updated or DEFAULT_CONV_STATE
@@ -389,7 +404,7 @@ def increment_challenge_count(
     turn_number: int = 0,
 ) -> None:
     """Track that a spontaneous challenge was issued, with turn number for gap tracking."""
-    _conv_state.update_one(
+    _conv_state().update_one(
         {"conversation_id": conversation_id},
         {
             "$inc": {"challenge_issued": 1},
@@ -403,7 +418,7 @@ def increment_challenge_count(
 
 def get_conv_state_dict(conversation_id: str) -> Dict:
     """Get conversation state as a plain dict suitable for prompt injection."""
-    doc = _conv_state.find_one({"conversation_id": conversation_id})
+    doc = _conv_state().find_one({"conversation_id": conversation_id})
     if not doc:
         return DEFAULT_CONV_STATE
     doc.pop("_id", None)

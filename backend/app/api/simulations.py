@@ -20,7 +20,7 @@ import logging
 from typing import Any, Dict, List, Optional
 
 from fastapi import APIRouter, HTTPException
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, ConfigDict, Field
 
 from app.engine.simulation_generator import (
     generate_simulation_engine,
@@ -77,7 +77,9 @@ class GenerateGuidanceRequest(BaseModel):
 
 
 class SaveSimulationRequest(BaseModel):
-    _id: Optional[str] = None
+    model_config = ConfigDict(populate_by_name=True)
+
+    id: Optional[str] = Field(None, alias="_id")
     user_id: str = "default"
     blueprint: Dict[str, Any]
     model: Optional[Dict[str, Any]] = None
@@ -134,10 +136,7 @@ async def api_generate_guidance(req: GenerateGuidanceRequest):
 async def api_save_simulation(req: SaveSimulationRequest):
     """Save or update a simulation document."""
     try:
-        doc = req.model_dump()
-        # Move underscore-prefixed ID to _id
-        if doc.get("_id"):
-            pass
+        doc = req.model_dump(by_alias=True, exclude_none=True)
         sim_id = save_simulation(doc)
         return {"success": True, "simulation_id": sim_id}
     except Exception as e:

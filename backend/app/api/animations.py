@@ -19,7 +19,7 @@ import logging
 from typing import Any, Dict, List, Optional
 
 from fastapi import APIRouter, HTTPException
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, ConfigDict, Field
 
 from app.engine.animation_generator import (
     generate_scene_content,
@@ -76,7 +76,9 @@ class RefineNarrationRequest(BaseModel):
 
 
 class SaveAnimationRequest(BaseModel):
-    _id: Optional[str] = None
+    model_config = ConfigDict(populate_by_name=True)
+
+    id: Optional[str] = Field(None, alias="_id")
     created_by: str = "default"
     blueprint: Dict[str, Any]
     scenes: List[Dict[str, Any]] = []
@@ -127,7 +129,7 @@ async def api_refine_narration(req: RefineNarrationRequest):
 async def api_save_animation(req: SaveAnimationRequest):
     """Save or update an animation document."""
     try:
-        doc = req.model_dump()
+        doc = req.model_dump(by_alias=True, exclude_none=True)
         # Compute total duration
         doc["total_duration"] = sum(
             s.get("duration_seconds", 0) for s in doc.get("scenes", [])

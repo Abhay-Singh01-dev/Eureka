@@ -246,6 +246,7 @@ const Home: FC = () => {
       const res = await fetch(
         `/api/dashboard/conversations/${conv.id}/messages`,
       );
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
       const data = await res.json();
 
       const msgs: StreamingMessage[] = (data.messages || []).map(
@@ -424,7 +425,10 @@ const Home: FC = () => {
 
   const handleDeleteConversation = async (id: string) => {
     try {
-      await fetch(`/api/dashboard/conversations/${id}`, { method: "DELETE" });
+      const res = await fetch(`/api/dashboard/conversations/${id}`, {
+        method: "DELETE",
+      });
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
       // If the deleted conversation is currently active, start a new chat
       if (conversationId === id) {
         startNewChat();
@@ -437,10 +441,11 @@ const Home: FC = () => {
 
   const handleRenameConversation = async (id: string, newTitle: string) => {
     try {
-      await fetch(
+      const res = await fetch(
         `/api/dashboard/conversations/${id}/rename?title=${encodeURIComponent(newTitle)}`,
         { method: "PATCH" },
       );
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
       refreshConversations();
     } catch (err) {
       console.error("Failed to rename conversation:", err);

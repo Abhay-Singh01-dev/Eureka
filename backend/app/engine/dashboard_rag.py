@@ -179,8 +179,9 @@ def format_rag_context(concepts: Optional[List[Dict]]) -> Optional[str]:
 
 def get_graph_stats() -> Dict:
     """Return basic statistics about the knowledge graph."""
-    total = _topic_graph.count_documents({})
-    topics = _topic_graph.distinct("topic")
+    coll = _get_topic_graph()
+    total = coll.count_documents({})
+    topics = coll.distinct("topic")
     return {
         "total_concepts": total,
         "topics": topics,

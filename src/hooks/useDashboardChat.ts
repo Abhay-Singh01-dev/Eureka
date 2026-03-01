@@ -169,9 +169,11 @@ export function useDashboardChat({
       setIsStreaming(true);
 
       // Build history from existing messages (excluding current)
+      // Cap to last 20 messages to avoid URL length limits
       const history = messagesRef.current
         .filter((m) => !m.isStreaming)
-        .map((m) => ({ role: m.role, content: m.content }));
+        .map((m) => ({ role: m.role, content: m.content }))
+        .slice(-20);
 
       const params = new URLSearchParams({
         message: userMessage.trim(),
