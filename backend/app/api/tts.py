@@ -27,8 +27,8 @@ router = APIRouter()
 _DEFAULT_VOICE = "en-GB-SoniaNeural"
 AUDIO_TTL_HOURS = 72  # Clean up audio files older than this
 
-# ── Simple in-memory rate limiter (per-IP, 30 requests / 60 seconds) ───
-_RATE_LIMIT = 30
+# ── Simple in-memory rate limiter (per-IP, 10 requests / 60 seconds) ───
+_RATE_LIMIT = 10
 _RATE_WINDOW = 60  # seconds
 _rate_buckets: dict[str, list[float]] = defaultdict(list)
 

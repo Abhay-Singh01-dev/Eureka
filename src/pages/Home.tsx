@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect, useMemo, type FC } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Rocket, Volume2, VolumeX } from "lucide-react";
+import { Rocket } from "lucide-react";
 import Sidebar from "@/components/sidebar/Sidebar";
 import StreamingMessageBubble from "@/components/chat/StreamingMessageBubble";
 import InputBox from "@/components/chat/InputBox";
@@ -16,7 +16,7 @@ import {
   useDashboardChat,
   type StreamingMessage,
 } from "@/hooks/useDashboardChat";
-import { useTTSStreaming } from "@/hooks/useTTSStreaming";
+import { useTTSAutoRead } from "@/hooks/useTTSAutoRead";
 import { useCustomModules } from "@/hooks/useCustomModules";
 import { useSimulations } from "@/hooks/useSimulations";
 import { useAnimations } from "@/hooks/useAnimations";
@@ -150,17 +150,18 @@ const Home: FC = () => {
     },
   });
 
-  // ── TTS streaming auto-read (reads as text appears) ─────────────────
-  const streamingContent = useMemo(() => {
-    if (!isStreaming) return undefined;
-    const last = messages[messages.length - 1];
-    return last?.role === "assistant" && last.isStreaming
-      ? last.content
-      : undefined;
-  }, [messages, isStreaming]);
+  // ── TTS auto-read ───────────────────────────────────────────────────
+  const lastAssistantContent = useMemo(() => {
+    for (let i = messages.length - 1; i >= 0; i--) {
+      if (messages[i].role === "assistant" && !messages[i].isStreaming) {
+        return messages[i].content;
+      }
+    }
+    return undefined;
+  }, [messages]);
 
-  const { autoReadEnabled, toggleAutoRead, stopPlayback } = useTTSStreaming({
-    streamingContent,
+  const { autoReadEnabled, toggleAutoRead, stopPlayback } = useTTSAutoRead({
+    lastAssistantContent,
     isStreaming,
   });
 
@@ -620,33 +621,12 @@ const Home: FC = () => {
             {/* Input — pinned to bottom, never inside scroll area */}
             {hasMessages && (
               <div className="flex-shrink-0 bg-[#F9FAFB] dark:bg-gray-900">
-                <div className="max-w-3xl mx-auto flex items-end gap-2 px-4">
-                  <div className="flex-1">
-                    <InputBox
-                      onSend={handleSendMessage}
-                      placeholder="Ask me anything — I'm here to help you understand..."
-                      isLoading={isStreaming}
-                      isCentered={false}
-                    />
-                  </div>
-                  <button
-                    onClick={toggleAutoRead}
-                    title={
-                      autoReadEnabled ? "Mute auto-read" : "Auto-read responses"
-                    }
-                    className={`mb-3 w-9 h-9 rounded-full flex items-center justify-center transition-colors duration-200 ${
-                      autoReadEnabled
-                        ? "bg-blue-100 text-blue-600 dark:bg-blue-900/40 dark:text-blue-400"
-                        : "bg-gray-100 text-gray-400 hover:text-gray-600 dark:bg-gray-700 dark:text-gray-500 dark:hover:text-gray-300"
-                    }`}
-                  >
-                    {autoReadEnabled ? (
-                      <Volume2 className="w-4 h-4" />
-                    ) : (
-                      <VolumeX className="w-4 h-4" />
-                    )}
-                  </button>
-                </div>
+                <InputBox
+                  onSend={handleSendMessage}
+                  placeholder="Ask me anything — I'm here to help you understand..."
+                  isLoading={isStreaming}
+                  isCentered={false}
+                />
               </div>
             )}
           </div>
