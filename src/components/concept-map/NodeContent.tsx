@@ -3,6 +3,7 @@ import React, {
   useRef,
   useEffect,
   useCallback,
+  useMemo,
   type FC,
 } from "react";
 import { motion, AnimatePresence } from "framer-motion";
@@ -11,6 +12,7 @@ import {
   Sparkles,
   Play,
   Volume2,
+  VolumeX,
   AlertCircle,
   Trash2,
 } from "lucide-react";
@@ -22,6 +24,7 @@ import {
 } from "@/hooks/useStreamingChat";
 import VideoPlayer from "@/components/visualizations/VideoPlayer";
 import { ScreenManager } from "@/components/screens";
+import { useTTSStreaming } from "@/hooks/useTTSStreaming";
 import type { ConceptNodeData } from "@/types";
 
 interface NodeContentProps {
@@ -130,6 +133,20 @@ const NodeContent: FC<NodeContentProps> = ({
     onDone: (_intent, _depth) => {
       // Could track depth/intent in UI if needed
     },
+  });
+
+  /* ── TTS streaming auto-read (reads as text appears) ── */
+  const streamingContent = useMemo(() => {
+    if (!isGenerating) return undefined;
+    const last = messages[messages.length - 1];
+    return last?.role === "assistant" && last.isStreaming
+      ? last.content
+      : undefined;
+  }, [messages, isGenerating]);
+
+  const { autoReadEnabled, toggleAutoRead, stopPlayback } = useTTSStreaming({
+    streamingContent,
+    isStreaming: isGenerating,
   });
 
   const inputRef = useRef<HTMLDivElement>(null);
@@ -272,9 +289,25 @@ const NodeContent: FC<NodeContentProps> = ({
           </div>
           <div className="flex items-center gap-3">
             <span className="text-3xl">{node.emoji}</span>
-            <h1 className="text-2xl md:text-3xl font-bold text-gray-900 dark:text-white">
+            <h1 className="text-2xl md:text-3xl font-bold text-gray-900 dark:text-white flex-1">
               {node.title}
             </h1>
+            {/* TTS toggle */}
+            <button
+              onClick={toggleAutoRead}
+              title={autoReadEnabled ? "Mute auto-read" : "Auto-read responses"}
+              className={`w-9 h-9 rounded-full flex items-center justify-center transition-colors duration-200 ${
+                autoReadEnabled
+                  ? "bg-blue-100 text-blue-600 dark:bg-blue-900/40 dark:text-blue-400"
+                  : "bg-gray-100 text-gray-400 hover:text-gray-600 dark:bg-gray-700 dark:text-gray-500 dark:hover:text-gray-300"
+              }`}
+            >
+              {autoReadEnabled ? (
+                <Volume2 className="w-4.5 h-4.5" />
+              ) : (
+                <VolumeX className="w-4.5 h-4.5" />
+              )}
+            </button>
           </div>
         </div>
       </div>
