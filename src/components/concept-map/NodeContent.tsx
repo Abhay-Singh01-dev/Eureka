@@ -3,6 +3,7 @@ import React, {
   useRef,
   useEffect,
   useCallback,
+  useMemo,
   type FC,
 } from "react";
 import { motion, AnimatePresence } from "framer-motion";
@@ -16,6 +17,7 @@ import {
 } from "lucide-react";
 import InputBox from "@/components/chat/InputBox";
 import StreamingMessageBubble from "@/components/chat/StreamingMessageBubble";
+import { useTTSStreaming } from "@/hooks/useTTSStreaming";
 import {
   useStreamingChat,
   type StreamingMessage,
@@ -130,6 +132,21 @@ const NodeContent: FC<NodeContentProps> = ({
     onDone: (_intent, _depth) => {
       // Could track depth/intent in UI if needed
     },
+  });
+
+  // ── TTS streaming auto-read ──
+  const streamingContent = useMemo(() => {
+    for (let i = messages.length - 1; i >= 0; i--) {
+      if (messages[i].role === "assistant" && messages[i].isStreaming) {
+        return messages[i].content;
+      }
+    }
+    return undefined;
+  }, [messages]);
+
+  const { readAloud, playingMessageId } = useTTSStreaming({
+    streamingContent,
+    isStreaming: isGenerating,
   });
 
   const inputRef = useRef<HTMLDivElement>(null);
@@ -305,6 +322,8 @@ const NodeContent: FC<NodeContentProps> = ({
                 inputRef={inputRef}
                 messagesEndRef={messagesEndRef}
                 nodeTitle={node.title}
+                readAloud={readAloud}
+                playingMessageId={playingMessageId}
               />
             </>
           ) : (
@@ -459,6 +478,8 @@ const NodeContent: FC<NodeContentProps> = ({
                 inputRef={inputRef}
                 messagesEndRef={messagesEndRef}
                 nodeTitle={node.title}
+                readAloud={readAloud}
+                playingMessageId={playingMessageId}
               />
             </>
           )}
@@ -489,6 +510,8 @@ interface ChatAreaProps {
   nodeTitle: string;
   /** When true, the InputBox is rendered outside (sticky bottom) — ChatArea won't render it */
   stickyInput?: boolean;
+  readAloud?: (text: string, messageId: number) => void;
+  playingMessageId?: number | null;
 }
 
 const ChatArea: FC<ChatAreaProps> = ({
@@ -507,6 +530,8 @@ const ChatArea: FC<ChatAreaProps> = ({
   messagesEndRef,
   nodeTitle,
   stickyInput = false,
+  readAloud,
+  playingMessageId,
 }) => {
   const lastMsg = messages.length > 0 ? messages[messages.length - 1] : null;
   const showThinking =
@@ -581,7 +606,11 @@ const ChatArea: FC<ChatAreaProps> = ({
                       ease: [0.22, 1, 0.36, 1],
                     }}
                   >
-                    <StreamingMessageBubble message={msg} />
+                    <StreamingMessageBubble
+                      message={msg}
+                      onReadAloud={readAloud}
+                      isPlayingTTS={playingMessageId === msg.id}
+                    />
                   </motion.div>
                 </motion.div>
               ))}

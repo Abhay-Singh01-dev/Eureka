@@ -10,6 +10,7 @@
  */
 
 import React, { useMemo, type FC } from "react";
+import { Volume2, VolumeX, Square } from "lucide-react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import remarkMath from "remark-math";
@@ -18,6 +19,10 @@ import type { StreamingMessage } from "@/hooks/useStreamingChat";
 
 interface StreamingMessageBubbleProps {
   message: StreamingMessage;
+  /** Called when the user clicks the speaker button. */
+  onReadAloud?: (text: string, messageId: number) => void;
+  /** Whether TTS is currently playing this message. */
+  isPlayingTTS?: boolean;
 }
 
 /* ─── normalizeLatex ────────────────────────────────────────────────
@@ -109,6 +114,8 @@ function completeMarkdown(text: string): string {
 
 const StreamingMessageBubble: FC<StreamingMessageBubbleProps> = ({
   message,
+  onReadAloud,
+  isPlayingTTS,
 }) => {
   const { content, images, isStreaming, role } = message;
 
@@ -333,6 +340,28 @@ const StreamingMessageBubble: FC<StreamingMessageBubbleProps> = ({
           );
         })}
       </div>
+
+      {/* Per-message TTS button (ChatGPT style) — only on non-streaming assistant messages */}
+      {!isStreaming && content && onReadAloud && (
+        <div className="flex items-center gap-2 mt-1.5 ml-0.5">
+          <button
+            onClick={() => onReadAloud(content, message.id)}
+            className={`p-1 rounded transition-colors ${
+              isPlayingTTS
+                ? "text-blue-600 dark:text-blue-400 hover:text-blue-700"
+                : "text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-300"
+            }`}
+            title={isPlayingTTS ? "Stop reading" : "Read aloud"}
+            aria-label={isPlayingTTS ? "Stop reading" : "Read aloud"}
+          >
+            {isPlayingTTS ? (
+              <Square className="w-3.5 h-3.5 fill-current" />
+            ) : (
+              <Volume2 className="w-3.5 h-3.5" />
+            )}
+          </button>
+        </div>
+      )}
     </div>
   );
 };

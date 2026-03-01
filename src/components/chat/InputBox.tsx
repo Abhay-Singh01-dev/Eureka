@@ -6,14 +6,32 @@ import React, {
   type FC,
 } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Send, PenTool, FlaskConical, X, Edit2 } from "lucide-react";
+import {
+  Send,
+  PenTool,
+  FlaskConical,
+  X,
+  Edit2,
+  Camera,
+  Paperclip,
+} from "lucide-react";
 import VoiceButton from "@/components/ui/VoiceButton";
 import EquationBuilder from "./EquationBuilder";
 import ChemistryBuilder from "./ChemistryBuilder";
 import { BlockMath } from "react-katex";
 
+export interface Attachment {
+  file: File;
+  preview: string; // data URL for images, icon placeholder for docs
+  type: "image" | "document";
+}
+
 interface InputBoxProps {
-  onSend: (message: string, equations?: string[]) => void;
+  onSend: (
+    message: string,
+    equations?: string[],
+    attachments?: Attachment[],
+  ) => void;
   placeholder?: string;
   isLoading: boolean;
   isCentered: boolean;
@@ -27,6 +45,7 @@ const InputBox: FC<InputBoxProps> = ({
 }) => {
   const [message, setMessage] = useState<string>("");
   const [equations, setEquations] = useState<string[]>([]);
+  const [attachments, setAttachments] = useState<Attachment[]>([]);
   const [showEquationBuilder, setShowEquationBuilder] =
     useState<boolean>(false);
   const [showChemistryBuilder, setShowChemistryBuilder] =
@@ -39,14 +58,21 @@ const InputBox: FC<InputBoxProps> = ({
     latex: "",
   });
   const textareaRef = useRef<HTMLTextAreaElement | null>(null);
+  const cameraInputRef = useRef<HTMLInputElement | null>(null);
+  const fileInputRef = useRef<HTMLInputElement | null>(null);
 
   const handleSubmit = (e?: React.FormEvent<HTMLFormElement>) => {
     e?.preventDefault();
     if (!canSend) return;
 
-    onSend(message, equations);
+    onSend(
+      message,
+      equations,
+      attachments.length > 0 ? attachments : undefined,
+    );
     setMessage("");
     setEquations([]);
+    setAttachments([]);
   };
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
@@ -80,6 +106,38 @@ const InputBox: FC<InputBoxProps> = ({
     setShowEquationBuilder(true);
   };
 
+  /** Process a selected file (image or document) into an attachment preview */
+  const processFile = (file: File) => {
+    const isImage = file.type.startsWith("image/");
+    const reader = new FileReader();
+    reader.onload = () => {
+      const preview = reader.result as string;
+      setAttachments((prev) => [
+        ...prev,
+        { file, preview, type: isImage ? "image" : "document" },
+      ]);
+    };
+    reader.readAsDataURL(file);
+  };
+
+  const handleCameraCapture = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files;
+    if (!files) return;
+    Array.from(files).forEach(processFile);
+    e.target.value = ""; // reset so same file can be re-selected
+  };
+
+  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files;
+    if (!files) return;
+    Array.from(files).forEach(processFile);
+    e.target.value = "";
+  };
+
+  const removeAttachment = (indexToRemove: number) => {
+    setAttachments((prev) => prev.filter((_, i) => i !== indexToRemove));
+  };
+
   /* Resize on every message change — fires before paint */
   useLayoutEffect(() => {
     const textarea = textareaRef.current;
@@ -98,7 +156,9 @@ const InputBox: FC<InputBoxProps> = ({
     }
   }, []);
 
-  const canSend = (message.trim() || equations.length > 0) && !isLoading;
+  const canSend =
+    (message.trim() || equations.length > 0 || attachments.length > 0) &&
+    !isLoading;
 
   const inputUi = (
     <form onSubmit={handleSubmit} className="w-full">
@@ -145,6 +205,51 @@ const InputBox: FC<InputBoxProps> = ({
           )}
         </AnimatePresence>
 
+        {/* Attachment previews */}
+        <AnimatePresence>
+          {attachments.length > 0 && (
+            <motion.div
+              initial={{ height: 0, opacity: 0 }}
+              animate={{ height: "auto", opacity: 1 }}
+              exit={{ height: 0, opacity: 0 }}
+              className="px-4 pt-3 flex flex-wrap gap-2"
+            >
+              {attachments.map((att, index) => (
+                <motion.div
+                  key={`att-${index}`}
+                  layout
+                  initial={{ scale: 0.8, opacity: 0 }}
+                  animate={{ scale: 1, opacity: 1 }}
+                  exit={{ scale: 0.8, opacity: 0 }}
+                  className="relative group"
+                >
+                  {att.type === "image" ? (
+                    <img
+                      src={att.preview}
+                      alt={att.file.name}
+                      className="w-16 h-16 object-cover rounded-lg border border-gray-200 dark:border-gray-600"
+                    />
+                  ) : (
+                    <div className="w-16 h-16 rounded-lg border border-gray-200 dark:border-gray-600 bg-gray-100 dark:bg-gray-700 flex flex-col items-center justify-center">
+                      <Paperclip className="w-5 h-5 text-gray-500" />
+                      <span className="text-[9px] text-gray-500 mt-0.5 truncate max-w-[56px] px-1">
+                        {att.file.name.split(".").pop()?.toUpperCase()}
+                      </span>
+                    </div>
+                  )}
+                  <button
+                    type="button"
+                    onClick={() => removeAttachment(index)}
+                    className="absolute -top-1.5 -right-1.5 p-0.5 bg-white dark:bg-gray-600 rounded-full shadow opacity-0 group-hover:opacity-100 transition-opacity"
+                  >
+                    <X className="w-3 h-3 text-red-500" />
+                  </button>
+                </motion.div>
+              ))}
+            </motion.div>
+          )}
+        </AnimatePresence>
+
         <div className="px-4 py-2">
           <textarea
             ref={textareaRef}
@@ -167,6 +272,24 @@ const InputBox: FC<InputBoxProps> = ({
               onTranscript={(t: string) => setMessage((p) => p + t)}
               disabled={isLoading}
             />
+            <button
+              type="button"
+              onClick={() => cameraInputRef.current?.click()}
+              disabled={isLoading}
+              className="flex items-center justify-center w-10 h-10 rounded-full text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700/50 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+              aria-label="Capture image"
+            >
+              <Camera className="w-4 h-4" />
+            </button>
+            <button
+              type="button"
+              onClick={() => fileInputRef.current?.click()}
+              disabled={isLoading}
+              className="flex items-center justify-center w-10 h-10 rounded-full text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700/50 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+              aria-label="Attach file"
+            >
+              <Paperclip className="w-4 h-4" />
+            </button>
             <button
               type="button"
               onClick={() => setShowEquationBuilder(true)}
@@ -218,6 +341,24 @@ const InputBox: FC<InputBoxProps> = ({
 
   return (
     <>
+      {/* Hidden file inputs */}
+      <input
+        ref={cameraInputRef}
+        type="file"
+        accept="image/*"
+        capture="environment"
+        className="hidden"
+        onChange={handleCameraCapture}
+      />
+      <input
+        ref={fileInputRef}
+        type="file"
+        accept="image/*,.pdf,.doc,.docx,.txt,.csv,.xlsx"
+        multiple
+        className="hidden"
+        onChange={handleFileSelect}
+      />
+
       <div className={`w-full ${isCentered ? "" : "pt-4 pb-4"}`}>
         <div className={`w-full ${isCentered ? "" : "max-w-3xl mx-auto px-4"}`}>
           {inputUi}

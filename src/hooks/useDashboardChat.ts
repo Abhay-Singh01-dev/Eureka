@@ -75,7 +75,7 @@ export function useDashboardChat({
     return () => {
       abortRef.current?.abort();
       if (rafRef.current) {
-        cancelAnimationFrame(rafRef.current);
+        clearTimeout(rafRef.current);
         rafRef.current = 0;
       }
       pendingQueueRef.current = "";
@@ -83,7 +83,8 @@ export function useDashboardChat({
   }, []);
 
   /**
-   * drainOnce — consume ONE character per RAF frame (typewriter effect).
+   * drainOnce — consume characters from the pending queue at ~33 chars/sec
+   * (setTimeout 30 ms) for a natural, well-paced streaming feel.
    */
   const drainOnce = useCallback(() => {
     if (pendingQueueRef.current.length === 0) {
@@ -116,7 +117,7 @@ export function useDashboardChat({
       ),
     );
 
-    rafRef.current = requestAnimationFrame(drainOnce);
+    rafRef.current = window.setTimeout(drainOnce, 30) as unknown as number;
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -130,7 +131,7 @@ export function useDashboardChat({
       pendingDoneRef.current = false;
       pendingErrorRef.current = null;
       if (rafRef.current) {
-        cancelAnimationFrame(rafRef.current);
+        clearTimeout(rafRef.current);
         rafRef.current = 0;
       }
 
@@ -226,7 +227,10 @@ export function useDashboardChat({
                     receivedCharCount += event.content.length;
                     pendingQueueRef.current += event.content;
                     if (!rafRef.current) {
-                      rafRef.current = requestAnimationFrame(drainOnce);
+                      rafRef.current = window.setTimeout(
+                        drainOnce,
+                        30,
+                      ) as unknown as number;
                     }
                   }
                   break;
@@ -394,14 +398,20 @@ export function useDashboardChat({
                 case "done":
                   pendingDoneRef.current = true;
                   if (!rafRef.current) {
-                    rafRef.current = requestAnimationFrame(drainOnce);
+                    rafRef.current = window.setTimeout(
+                      drainOnce,
+                      30,
+                    ) as unknown as number;
                   }
                   break;
 
                 case "error":
                   pendingErrorRef.current = event.content || "Unknown error";
                   if (!rafRef.current) {
-                    rafRef.current = requestAnimationFrame(drainOnce);
+                    rafRef.current = window.setTimeout(
+                      drainOnce,
+                      30,
+                    ) as unknown as number;
                   }
                   break;
               }
@@ -415,18 +425,24 @@ export function useDashboardChat({
         if (!pendingDoneRef.current && !pendingErrorRef.current) {
           pendingDoneRef.current = true;
           if (!rafRef.current) {
-            rafRef.current = requestAnimationFrame(drainOnce);
+            rafRef.current = window.setTimeout(
+              drainOnce,
+              30,
+            ) as unknown as number;
           }
         }
       } catch (err: any) {
         if (err.name !== "AbortError") {
           pendingErrorRef.current = err.message || "Connection failed";
           if (!rafRef.current) {
-            rafRef.current = requestAnimationFrame(drainOnce);
+            rafRef.current = window.setTimeout(
+              drainOnce,
+              30,
+            ) as unknown as number;
           }
         } else {
           if (rafRef.current) {
-            cancelAnimationFrame(rafRef.current);
+            clearTimeout(rafRef.current);
             rafRef.current = 0;
           }
           pendingQueueRef.current = "";
@@ -446,7 +462,7 @@ export function useDashboardChat({
   const stopStreaming = useCallback(() => {
     abortRef.current?.abort();
     if (rafRef.current) {
-      cancelAnimationFrame(rafRef.current);
+      clearTimeout(rafRef.current);
       rafRef.current = 0;
     }
     pendingQueueRef.current = "";
@@ -457,7 +473,7 @@ export function useDashboardChat({
   const startNewChat = useCallback(() => {
     abortRef.current?.abort();
     if (rafRef.current) {
-      cancelAnimationFrame(rafRef.current);
+      clearTimeout(rafRef.current);
       rafRef.current = 0;
     }
     pendingQueueRef.current = "";
@@ -473,7 +489,7 @@ export function useDashboardChat({
     (convId: string, msgs: StreamingMessage[]) => {
       abortRef.current?.abort();
       if (rafRef.current) {
-        cancelAnimationFrame(rafRef.current);
+        clearTimeout(rafRef.current);
         rafRef.current = 0;
       }
       pendingQueueRef.current = "";

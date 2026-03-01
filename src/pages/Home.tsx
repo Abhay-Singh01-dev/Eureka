@@ -16,7 +16,7 @@ import {
   useDashboardChat,
   type StreamingMessage,
 } from "@/hooks/useDashboardChat";
-import { useTTSAutoRead } from "@/hooks/useTTSAutoRead";
+import { useTTSStreaming } from "@/hooks/useTTSStreaming";
 import { useCustomModules } from "@/hooks/useCustomModules";
 import { useSimulations } from "@/hooks/useSimulations";
 import { useAnimations } from "@/hooks/useAnimations";
@@ -150,18 +150,18 @@ const Home: FC = () => {
     },
   });
 
-  // ── TTS auto-read ───────────────────────────────────────────────────
-  const lastAssistantContent = useMemo(() => {
+  // ── TTS streaming auto-read ──────────────────────────────────────────
+  const streamingContent = useMemo(() => {
     for (let i = messages.length - 1; i >= 0; i--) {
-      if (messages[i].role === "assistant" && !messages[i].isStreaming) {
+      if (messages[i].role === "assistant" && messages[i].isStreaming) {
         return messages[i].content;
       }
     }
     return undefined;
   }, [messages]);
 
-  const { autoReadEnabled, toggleAutoRead, stopPlayback } = useTTSAutoRead({
-    lastAssistantContent,
+  const { stopPlayback, readAloud, playingMessageId } = useTTSStreaming({
+    streamingContent,
     isStreaming,
   });
 
@@ -211,11 +211,23 @@ const Home: FC = () => {
   const handleSendMessage = async (
     content: string,
     equations: string[] = [],
+    attachments?: { file: File; preview: string; type: "image" | "document" }[],
   ) => {
     let fullMessage = content;
     if (equations.length > 0) {
       fullMessage +=
         "\n\nEquations:\n" + equations.map((eq) => `$$${eq}$$`).join("\n");
+    }
+
+    // Append attachment descriptions so the AI knows what was shared
+    if (attachments && attachments.length > 0) {
+      const descriptions = attachments.map((att) => {
+        if (att.type === "image") {
+          return `[Attached image: ${att.file.name}]`;
+        }
+        return `[Attached document: ${att.file.name}]`;
+      });
+      fullMessage += "\n\n" + descriptions.join("\n");
     }
 
     // Switch to dashboard view if on concept map
@@ -600,7 +612,11 @@ const Home: FC = () => {
                                 : "justify-start"
                             }`}
                           >
-                            <StreamingMessageBubble message={msg} />
+                            <StreamingMessageBubble
+                              message={msg}
+                              onReadAloud={readAloud}
+                              isPlayingTTS={playingMessageId === msg.id}
+                            />
                           </motion.div>
                         ))}
                       </AnimatePresence>

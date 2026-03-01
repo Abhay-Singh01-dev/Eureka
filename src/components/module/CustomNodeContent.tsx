@@ -31,6 +31,7 @@ import {
 } from "lucide-react";
 import InputBox from "@/components/chat/InputBox";
 import StreamingMessageBubble from "@/components/chat/StreamingMessageBubble";
+import { useTTSStreaming } from "@/hooks/useTTSStreaming";
 import {
   useStreamingChat,
   type StreamingMessage,
@@ -480,6 +481,20 @@ const CustomNodeContent: FC<CustomNodeContentProps> = ({
     onDone: () => {},
   });
 
+  const streamingContent = useMemo(() => {
+    for (let i = messages.length - 1; i >= 0; i--) {
+      if (messages[i].role === "assistant" && messages[i].isStreaming) {
+        return messages[i].content;
+      }
+    }
+    return undefined;
+  }, [messages]);
+
+  const { readAloud, playingMessageId } = useTTSStreaming({
+    isStreaming: isGenerating,
+    streamingContent,
+  });
+
   const inputRef = useRef<HTMLDivElement>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
@@ -844,7 +859,11 @@ const CustomNodeContent: FC<CustomNodeContentProps> = ({
                               ease: [0.22, 1, 0.36, 1],
                             }}
                           >
-                            <StreamingMessageBubble message={msg} />
+                            <StreamingMessageBubble
+                              message={msg}
+                              onReadAloud={readAloud}
+                              isPlayingTTS={playingMessageId === msg.id}
+                            />
                           </motion.div>
                         </motion.div>
                       ))}

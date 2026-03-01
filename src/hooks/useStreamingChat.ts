@@ -1,5 +1,5 @@
-﻿/**
- * useStreamingChat â€” SSE streaming hook for the adaptive teaching system.
+/**
+ * useStreamingChat — SSE streaming hook for the adaptive teaching system.
  *
  * Connects to /api/chat/stream via fetch + ReadableStream,
  * parses SSE events, and yields them to the caller.
@@ -84,12 +84,12 @@ export function useStreamingChat({
     messagesRef.current = messages;
   }, [messages]);
 
-  // â”€â”€ Typewriter queue â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  // ── Typewriter queue ─────────────────────────────────────────────────
   // All chars received from GPT but not yet rendered
   const pendingQueueRef = useRef<string>("");
   // RAF handle
   const rafRef = useRef<number>(0);
-  // Pending done/error event â€” wait for queue to drain before finalising
+  // Pending done/error event — wait for queue to drain before finalising
   const pendingDoneRef = useRef<{ intent: string; depth: number } | null>(null);
   const pendingErrorRef = useRef<string | null>(null);
   // Stable ref for callbacks so drainOnce closure stays fresh-free
@@ -102,25 +102,25 @@ export function useStreamingChat({
     onDoneRef.current = onDone;
   }, [onDone]);
 
-  // ── Abort streaming on unmount (C5 fix) ─────────────────────────────
+  // -- Abort streaming on unmount (C5 fix) -----------------------------
   useEffect(() => {
     return () => {
       abortRef.current?.abort();
       if (rafRef.current) {
-        cancelAnimationFrame(rafRef.current);
+        clearTimeout(rafRef.current);
         rafRef.current = 0;
       }
       pendingQueueRef.current = "";
     };
   }, []);
 
-  // ── Abort when nodeId changes (user navigated to different node) ────
+  // -- Abort when nodeId changes (user navigated to different node) ----
   const prevNodeIdRef = useRef(nodeId);
   useEffect(() => {
     if (prevNodeIdRef.current !== nodeId) {
       abortRef.current?.abort();
       if (rafRef.current) {
-        cancelAnimationFrame(rafRef.current);
+        clearTimeout(rafRef.current);
         rafRef.current = 0;
       }
       pendingQueueRef.current = "";
@@ -134,14 +134,14 @@ export function useStreamingChat({
   }, [nodeId]);
 
   /**
-   * drainOnce â€” consumes ONE character from the pending queue per RAF frame.
+   * drainOnce — consumes ONE character from the pending queue every ~30ms.
    * Uses only refs + stable setState so it needs zero deps (never goes stale).
    */
   const drainOnce = useCallback(() => {
     if (pendingQueueRef.current.length === 0) {
       rafRef.current = 0;
 
-      // Queue is empty â€” finalise if we received a done/error signal
+      // Queue is empty — finalise if we received a done/error signal
       if (pendingDoneRef.current) {
         const data = pendingDoneRef.current;
         pendingDoneRef.current = null;
@@ -172,9 +172,9 @@ export function useStreamingChat({
       ),
     );
 
-    rafRef.current = requestAnimationFrame(drainOnce);
+    rafRef.current = window.setTimeout(drainOnce, 30) as unknown as number;
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []); // intentionally empty â€” all state accessed via refs or stable setters
+  }, []); // intentionally empty — all state accessed via refs or stable setters
 
   const sendMessage = useCallback(
     async (userMessage: string) => {
@@ -187,7 +187,7 @@ export function useStreamingChat({
       pendingDoneRef.current = null;
       pendingErrorRef.current = null;
       if (rafRef.current) {
-        cancelAnimationFrame(rafRef.current);
+        clearTimeout(rafRef.current);
         rafRef.current = 0;
       }
 
@@ -275,7 +275,10 @@ export function useStreamingChat({
                     // Push into queue; start drain loop if idle
                     pendingQueueRef.current += event.content;
                     if (!rafRef.current) {
-                      rafRef.current = requestAnimationFrame(drainOnce);
+                      rafRef.current = window.setTimeout(
+                        drainOnce,
+                        30,
+                      ) as unknown as number;
                     }
                   }
                   break;
@@ -328,7 +331,7 @@ export function useStreamingChat({
                           };
                           return { ...m, images: newImages };
                         }
-                        // Fallback — no loading placeholder found, add directly
+                        // Fallback � no loading placeholder found, add directly
                         return {
                           ...m,
                           images: [
@@ -452,21 +455,27 @@ export function useStreamingChat({
                   break;
 
                 case "done":
-                  // Don't finalise immediately â€” wait for typewriter to drain
+                  // Don't finalise immediately — wait for typewriter to drain
                   pendingDoneRef.current = {
                     intent: event.intent || "clarification",
                     depth: event.depth || 1,
                   };
                   // If queue already empty, trigger drain loop to finalise
                   if (!rafRef.current) {
-                    rafRef.current = requestAnimationFrame(drainOnce);
+                    rafRef.current = window.setTimeout(
+                      drainOnce,
+                      30,
+                    ) as unknown as number;
                   }
                   break;
 
                 case "error":
                   pendingErrorRef.current = event.content || "Unknown error";
                   if (!rafRef.current) {
-                    rafRef.current = requestAnimationFrame(drainOnce);
+                    rafRef.current = window.setTimeout(
+                      drainOnce,
+                      30,
+                    ) as unknown as number;
                   }
                   break;
               }
@@ -476,23 +485,29 @@ export function useStreamingChat({
           }
         }
 
-        // Stream ended â€” if no done/error signal received, finalise after drain
+        // Stream ended — if no done/error signal received, finalise after drain
         if (!pendingDoneRef.current && !pendingErrorRef.current) {
           pendingDoneRef.current = { intent: "clarification", depth: 1 };
           if (!rafRef.current) {
-            rafRef.current = requestAnimationFrame(drainOnce);
+            rafRef.current = window.setTimeout(
+              drainOnce,
+              30,
+            ) as unknown as number;
           }
         }
       } catch (err: any) {
         if (err.name !== "AbortError") {
           pendingErrorRef.current = err.message || "Connection failed";
           if (!rafRef.current) {
-            rafRef.current = requestAnimationFrame(drainOnce);
+            rafRef.current = window.setTimeout(
+              drainOnce,
+              30,
+            ) as unknown as number;
           }
         } else {
-          // Aborted â€” clean up immediately
+          // Aborted — clean up immediately
           if (rafRef.current) {
-            cancelAnimationFrame(rafRef.current);
+            clearTimeout(rafRef.current);
             rafRef.current = 0;
           }
           pendingQueueRef.current = "";
@@ -511,7 +526,7 @@ export function useStreamingChat({
   const stopStreaming = useCallback(() => {
     abortRef.current?.abort();
     if (rafRef.current) {
-      cancelAnimationFrame(rafRef.current);
+      clearTimeout(rafRef.current);
       rafRef.current = 0;
     }
     pendingQueueRef.current = "";
@@ -520,7 +535,7 @@ export function useStreamingChat({
 
   const clearMessages = useCallback(() => {
     if (rafRef.current) {
-      cancelAnimationFrame(rafRef.current);
+      clearTimeout(rafRef.current);
       rafRef.current = 0;
     }
     pendingQueueRef.current = "";

@@ -27,8 +27,8 @@ router = APIRouter()
 _DEFAULT_VOICE = "en-GB-SoniaNeural"
 AUDIO_TTL_HOURS = 72  # Clean up audio files older than this
 
-# ── Simple in-memory rate limiter (per-IP, 10 requests / 60 seconds) ───
-_RATE_LIMIT = 10
+# ── Simple in-memory rate limiter (per-IP, 30 requests / 60 seconds) ───
+_RATE_LIMIT = 30
 _RATE_WINDOW = 60  # seconds
 _rate_buckets: dict[str, list[float]] = defaultdict(list)
 
@@ -82,7 +82,9 @@ class TTSRequest(BaseModel):
 
 
 def _synthesise(file_path: str, text: str, voice: str, api_key: str, region: str) -> speechsdk.SpeechSynthesisResult:
-    """Run Azure TTS synchronously (called inside asyncio.to_thread)."""
+    """Run Azure TTS synchronously with a 10-second timeout."""
+    import concurrent.futures
+
     speech_config = speechsdk.SpeechConfig(subscription=api_key, region=region)
     speech_config.speech_synthesis_voice_name = voice
     speech_config.set_speech_synthesis_output_format(
@@ -95,7 +97,12 @@ def _synthesise(file_path: str, text: str, voice: str, api_key: str, region: str
         audio_config=audio_config,
     )
 
-    return synthesizer.speak_text_async(text).get()
+    future = synthesizer.speak_text_async(text)
+    try:
+        return future.get(timeout=10000)  # 10 second timeout (ms)
+    except Exception as e:
+        logger.error(f"[tts] Synthesis timed out or failed: {e}")
+        raise RuntimeError("TTS synthesis timed out") from e
 
 
 @router.post("/generate")
@@ -135,17 +142,36 @@ async def generate_tts(request: TTSRequest, req: Request) -> dict[str, str]:
             "Set AZURE_SPEECH_API_KEY and AZURE_SPEECH_REGION in backend/.env",
         )
 
-    result = await asyncio.to_thread(
-        _synthesise, file_path, request.text, voice, api_key, region
-    )
+    try:
+        result = await asyncio.to_thread(
+            _synthesise, file_path, request.text, voice, api_key, region
+        )
+    except Exception as e:
+        logger.error(f"[tts] Synthesis exception: {e}")
+        if os.path.exists(file_path):
+            try:
+                os.remove(file_path)
+            except OSError:
+                pass
+        raise HTTPException(
+            status_code=503,
+            detail="TTS synthesis timed out or failed. Use browser fallback.",
+        )
 
     if result.reason != speechsdk.ResultReason.SynthesizingAudioCompleted:
         # Clean up any partial file to avoid serving corrupt audio.
         if os.path.exists(file_path):
-            os.remove(file_path)
+            try:
+                os.remove(file_path)
+            except OSError:
+                pass
+        cancel = result.cancellation_details
+        logger.error(f"[tts] Synthesis failed: reason={result.reason}, "
+                     f"cancel_reason={cancel.reason if cancel else 'N/A'}, "
+                     f"error={cancel.error_details if cancel else 'N/A'}")
         raise HTTPException(
-            status_code=500,
-            detail=f"Azure TTS synthesis failed: {result.reason}",
+            status_code=503,
+            detail=f"Azure TTS failed: {result.reason}. Use browser fallback.",
         )
 
     return {"audioUrl": audio_url}
