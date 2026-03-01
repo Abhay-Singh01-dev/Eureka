@@ -123,7 +123,10 @@ export function useDashboardChat({
 
   // ── sendMessage ─────────────────────────────────────────────────────
   const sendMessage = useCallback(
-    async (userMessage: string) => {
+    async (
+      userMessage: string,
+      images?: Array<{ base64: string; mime: string; name?: string }>,
+    ) => {
       if (!userMessage.trim() || isStreaming) return;
 
       setError(null);
@@ -151,6 +154,7 @@ export function useDashboardChat({
         content: userMessage.trim(),
         images: [],
         videos: [],
+        attachments: images && images.length > 0 ? images : undefined,
         isStreaming: false,
         timestamp: new Date(),
       };
@@ -176,22 +180,48 @@ export function useDashboardChat({
         .map((m) => ({ role: m.role, content: m.content }))
         .slice(-20);
 
-      const params = new URLSearchParams({
-        message: userMessage.trim(),
-        conversationId: convId,
-        history: JSON.stringify(history),
-        userId: getUserId(),
-      });
-
       const abortController = new AbortController();
       abortRef.current = abortController;
       let receivedCharCount = 0;
 
       try {
-        const response = await fetch(`/api/dashboard/stream?${params}`, {
-          signal: abortController.signal,
-          headers: { Accept: "text/event-stream" },
-        });
+        const hasImages = images && images.length > 0;
+        let response: Response;
+
+        if (hasImages) {
+          // POST with JSON body (supports image attachments)
+          response = await fetch("/api/dashboard/stream", {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              Accept: "text/event-stream",
+            },
+            body: JSON.stringify({
+              message: userMessage.trim(),
+              conversationId: convId,
+              history: JSON.stringify(history),
+              userId: getUserId(),
+              images: images.map((img) => ({
+                base64: img.base64,
+                mime: img.mime,
+                name: img.name || "",
+              })),
+            }),
+            signal: abortController.signal,
+          });
+        } else {
+          // GET for text-only (lightweight, backwards compatible)
+          const params = new URLSearchParams({
+            message: userMessage.trim(),
+            conversationId: convId,
+            history: JSON.stringify(history),
+            userId: getUserId(),
+          });
+          response = await fetch(`/api/dashboard/stream?${params}`, {
+            signal: abortController.signal,
+            headers: { Accept: "text/event-stream" },
+          });
+        }
 
         if (!response.ok) throw new Error(`HTTP ${response.status}`);
 

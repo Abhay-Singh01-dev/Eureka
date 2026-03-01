@@ -219,15 +219,38 @@ const Home: FC = () => {
         "\n\nEquations:\n" + equations.map((eq) => `$$${eq}$$`).join("\n");
     }
 
-    // Append attachment descriptions so the AI knows what was shared
+    // Extract image base64 data from attachments for the AI to analyze
+    const imageAttachments: Array<{
+      base64: string;
+      mime: string;
+      name: string;
+    }> = [];
+
     if (attachments && attachments.length > 0) {
-      const descriptions = attachments.map((att) => {
-        if (att.type === "image") {
-          return `[Attached image: ${att.file.name}]`;
+      for (const att of attachments) {
+        if (att.type === "image" && att.preview.startsWith("data:")) {
+          // Extract base64 from data URL: "data:image/png;base64,iVBOR..."
+          const commaIdx = att.preview.indexOf(",");
+          const base64 = commaIdx >= 0 ? att.preview.slice(commaIdx + 1) : "";
+          const mimeMatch = att.preview.match(/^data:([^;]+);/);
+          const mime = mimeMatch ? mimeMatch[1] : "image/png";
+          if (base64) {
+            imageAttachments.push({
+              base64,
+              mime,
+              name: att.file.name,
+            });
+          }
+        } else {
+          // Non-image attachments — append as text description
+          fullMessage += `\n\n[Attached document: ${att.file.name}]`;
         }
-        return `[Attached document: ${att.file.name}]`;
-      });
-      fullMessage += "\n\n" + descriptions.join("\n");
+      }
+
+      // If images are present without text, add a default prompt
+      if (imageAttachments.length > 0 && !fullMessage.trim()) {
+        fullMessage = "What is this image about?";
+      }
     }
 
     // Switch to dashboard view if on concept map
@@ -236,7 +259,10 @@ const Home: FC = () => {
       setActiveChapter(null);
     }
 
-    await sendMessage(fullMessage);
+    await sendMessage(
+      fullMessage,
+      imageAttachments.length > 0 ? imageAttachments : undefined,
+    );
 
     // Refresh conversations after response
     setTimeout(refreshConversations, 2000);
@@ -280,6 +306,15 @@ const Home: FC = () => {
             insertAfterChar: vid.insertAfterChar ?? 0,
             loading: false,
           })),
+          // Map user-attached images from DB
+          attachments:
+            m.role === "user" && m.images && m.images.length > 0
+              ? m.images.map((img: any) => ({
+                  base64: img.base64 || "",
+                  mime: img.mime || "image/png",
+                  name: img.description || "attachment",
+                }))
+              : undefined,
           isStreaming: false,
           timestamp: new Date((m.timestamp || 0) * 1000),
         }),

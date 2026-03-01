@@ -214,9 +214,32 @@ const StreamingMessageBubble: FC<StreamingMessageBubbleProps> = ({
   }, [content, images, message.videos, isStreaming]);
 
   if (role === "user") {
+    const userAttachments = message.attachments;
     return (
       <div className="max-w-[80%] p-4 rounded-lg bg-blue-600 text-white rounded-br-sm">
-        <p className="whitespace-pre-wrap leading-relaxed">{content}</p>
+        {/* User-attached images — displayed like ChatGPT/Claude */}
+        {userAttachments && userAttachments.length > 0 && (
+          <div
+            className={`mb-3 ${userAttachments.length === 1 ? "" : "grid grid-cols-2 gap-2"}`}
+          >
+            {userAttachments.map((att, idx) => (
+              <div
+                key={idx}
+                className="rounded-lg overflow-hidden border border-white/20"
+              >
+                <img
+                  src={`data:${att.mime};base64,${att.base64}`}
+                  alt={att.name || "Attached image"}
+                  className="w-full max-h-60 object-cover"
+                  loading="lazy"
+                />
+              </div>
+            ))}
+          </div>
+        )}
+        {content && (
+          <p className="whitespace-pre-wrap leading-relaxed">{content}</p>
+        )}
       </div>
     );
   }

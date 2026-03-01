@@ -288,9 +288,15 @@ class DashboardOrchestrator:
         self,
         user_message: str,
         history: List[Dict],
+        images: Optional[List[Dict]] = None,
     ) -> AsyncGenerator[dict, None]:
         """
         Process a user message and yield SSE events.
+
+        Args:
+            user_message: The user's text message.
+            history: Previous messages [{role, content}].
+            images: Optional list of attached images [{base64, mime, name}].
 
         Event types:
           {"type": "token",            "content": "..."}
@@ -303,13 +309,21 @@ class DashboardOrchestrator:
           {"type": "done"}
           {"type": "error",            "content": "..."}
         """
+        attached_images = images or []
         logger.info("=" * 60)
         logger.info("Processing message for user=%s...", self.user_id[:8])
         logger.info("Message: %s...", user_message[:80])
 
         # ── 0. Persist ──
         await asyncio.to_thread(ensure_conversation, self.conversation_id, user_message, self.user_id)
-        await asyncio.to_thread(save_message, self.conversation_id, "user", user_message)
+        # Save user message (with attached images if any)
+        user_images_for_db = None
+        if attached_images:
+            user_images_for_db = [
+                {"base64": img["base64"], "mime": img.get("mime", "image/png"), "description": img.get("name", "user attachment")}
+                for img in attached_images
+            ]
+        await asyncio.to_thread(save_message, self.conversation_id, "user", user_message, user_images_for_db)
 
         # ── 1. Hybrid Classification ──
         classification = await classify_message(user_message, history)
@@ -346,7 +360,19 @@ class DashboardOrchestrator:
                     "role": msg.get("role", "user"),
                     "content": msg.get("content", ""),
                 })
-            gpt_messages.append({"role": "user", "content": user_message})
+
+            # Multimodal user message if images attached
+            if attached_images:
+                user_content_util: list = [{"type": "text", "text": user_message}]
+                for img in attached_images:
+                    data_url = f"data:{img.get('mime', 'image/png')};base64,{img['base64']}"
+                    user_content_util.append({
+                        "type": "image_url",
+                        "image_url": {"url": data_url, "detail": "auto"},
+                    })
+                gpt_messages.append({"role": "user", "content": user_content_util})
+            else:
+                gpt_messages.append({"role": "user", "content": user_message})
 
             full_response = ""
             util_filter = StreamingDignityFilter()
@@ -536,7 +562,19 @@ class DashboardOrchestrator:
                 "role": msg.get("role", "user"),
                 "content": msg.get("content", ""),
             })
-        gpt_messages.append({"role": "user", "content": user_message})
+
+        # Build user message — multimodal if images attached, plain text otherwise
+        if attached_images:
+            user_content: list = [{"type": "text", "text": user_message}]
+            for img in attached_images:
+                data_url = f"data:{img.get('mime', 'image/png')};base64,{img['base64']}"
+                user_content.append({
+                    "type": "image_url",
+                    "image_url": {"url": data_url, "detail": "auto"},
+                })
+            gpt_messages.append({"role": "user", "content": user_content})
+        else:
+            gpt_messages.append({"role": "user", "content": user_message})
 
         # ── 11. Stream from GPT-5.2-chat ──
         full_response = ""

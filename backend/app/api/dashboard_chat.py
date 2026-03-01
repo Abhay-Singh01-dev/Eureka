@@ -12,9 +12,11 @@ Endpoints:
 
 import json
 import uuid
+from typing import List, Optional
 
 from fastapi import APIRouter, Query, Path
 from fastapi.responses import StreamingResponse
+from pydantic import BaseModel
 
 from app.engine.dashboard_orchestrator import (
     DashboardOrchestrator,
@@ -29,6 +31,20 @@ from app.engine.dashboard_cognitive import (
     get_profile_dict,
 )
 from app.engine.dignity_scorer import get_dignity_metrics
+
+
+class AttachedImage(BaseModel):
+    base64: str
+    mime: str = "image/png"
+    name: str = ""
+
+
+class DashboardStreamRequest(BaseModel):
+    message: str
+    conversationId: str = ""
+    history: str = "[]"
+    userId: str = ""
+    images: List[AttachedImage] = []
 
 router = APIRouter()
 
@@ -48,20 +64,29 @@ async def stream_dashboard_chat(
     userId: str = Query("", description="Persistent user ID from localStorage"),
 ):
     """
-    SSE streaming endpoint for cognitive dashboard chat.
-
-    Events emitted:
-      data: {"type": "conversation_id", "id": "..."}
-      data: {"type": "token",           "content": "..."}
-      data: {"type": "image_generating", "description": "..."}
-      data: {"type": "image",           "base64": "...", "mime": "...", "description": "..."}
-      data: {"type": "image_failed",     "description": "..."}
-      data: {"type": "video_generating", "description": "..."}
-      data: {"type": "video",           "base64": "...", "mime": "...", "description": "..."}
-      data: {"type": "video_failed",     "description": "..."}
-      data: {"type": "done"}
-      data: {"type": "error",           "content": "..."}
+    SSE streaming endpoint for cognitive dashboard chat (text only, legacy).
     """
+    return _build_stream_response(message, conversationId, history, userId, images=[])
+
+
+@router.post("/stream")
+async def stream_dashboard_chat_post(body: DashboardStreamRequest):
+    """
+    SSE streaming endpoint with image attachment support (POST).
+    Images are passed as base64 in the JSON body.
+    """
+    images = [{"base64": img.base64, "mime": img.mime, "name": img.name} for img in body.images]
+    return _build_stream_response(body.message, body.conversationId, body.history, body.userId, images=images)
+
+
+def _build_stream_response(
+    message: str,
+    conversationId: str,
+    history: str,
+    userId: str,
+    images: list,
+):
+    """Shared logic for both GET and POST stream endpoints."""
     try:
         hist = json.loads(history)
     except Exception:
@@ -71,7 +96,6 @@ async def stream_dashboard_chat(
     user_id = userId or ""
 
     async def event_generator():
-        # Emit conversation ID so frontend can track it
         yield _sse_event({"type": "conversation_id", "id": conversation_id})
 
         orchestrator = DashboardOrchestrator(
@@ -80,7 +104,7 @@ async def stream_dashboard_chat(
         )
 
         try:
-            async for event in orchestrator.process_message(message, hist):
+            async for event in orchestrator.process_message(message, hist, images=images):
                 yield _sse_event(event)
         except Exception as exc:
             print(f"[dashboard/stream] Error: {exc}")

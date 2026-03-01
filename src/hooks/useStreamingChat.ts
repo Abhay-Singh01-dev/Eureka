@@ -53,6 +53,12 @@ export interface StreamingMessage {
     /** true while the video is being generated (show shimmer) */
     loading?: boolean;
   }>;
+  /** User-attached images (displayed in the user bubble, sent to AI for analysis) */
+  attachments?: Array<{
+    base64: string;
+    mime: string;
+    name?: string;
+  }>;
   isStreaming: boolean;
   timestamp: Date;
 }
