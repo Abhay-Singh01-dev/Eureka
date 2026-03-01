@@ -1,0 +1,38 @@
+# ── Dependencies ──
+node_modules/
+
+# ── Build output ──
+dist/
+
+# ── Environment secrets (NEVER commit) ──
+.env
+.env.local
+.env.*.local
+backend/.env
+
+# ── IDE / Editor ──
+.vscode/
+
+# ── OS junk ──
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# ── Slide HTML exports (local-only presentation files) ──
+amd-usage-slide.html
+architecture-diagram.html
+brief-idea-slide.html
+cost-estimate-slide.html
+diagram-export.html
+features-slide-1.html
+features-slide-2.html
+opportunities-slide.html
+technologies-slide.html
+mermaid.min.js
+
+# ── Misc ──
+difference.md
+*.log
+
+# ── Cached TTS audio ──
+app/static/audio/

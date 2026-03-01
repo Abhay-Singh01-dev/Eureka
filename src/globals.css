@@ -1,0 +1,130 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer utilities {
+  @keyframes pulse-slow {
+    0%,
+    100% {
+      box-shadow: 0 0 0 0 rgba(20, 184, 166, 0.4);
+    }
+    50% {
+      box-shadow: 0 0 0 8px rgba(20, 184, 166, 0);
+    }
+  }
+
+  .animate-pulse-slow {
+    animation: pulse-slow 2s infinite;
+  }
+}
+
+/* ── Streaming cursor (Claude-like blinking caret) ── */
+.streaming-cursor::after {
+  content: "▎";
+  display: inline-block;
+  color: #14b8a6;
+  font-weight: 400;
+  animation: cursor-blink 0.8s steps(2) infinite;
+  margin-left: 1px;
+}
+
+@keyframes cursor-blink {
+  0% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0;
+  }
+  100% {
+    opacity: 1;
+  }
+}
+
+/* ── Image generation loading shimmer (ChatGPT-style) ── */
+.image-shimmer {
+  background: linear-gradient(
+    110deg,
+    transparent 25%,
+    rgba(20, 184, 166, 0.07) 37%,
+    rgba(20, 184, 166, 0.13) 50%,
+    rgba(20, 184, 166, 0.07) 63%,
+    transparent 75%
+  );
+  background-size: 250% 100%;
+  animation: shimmer-sweep 2.2s ease-in-out infinite;
+}
+
+@keyframes shimmer-sweep {
+  0% {
+    background-position: 200% 0;
+  }
+  100% {
+    background-position: -200% 0;
+  }
+}
+
+/* ── Video generation loading shimmer (purple tint) ── */
+.video-shimmer {
+  background: linear-gradient(
+    110deg,
+    transparent 25%,
+    rgba(147, 51, 234, 0.07) 37%,
+    rgba(147, 51, 234, 0.13) 50%,
+    rgba(147, 51, 234, 0.07) 63%,
+    transparent 75%
+  );
+  background-size: 250% 100%;
+  animation: shimmer-sweep 2.2s ease-in-out infinite;
+}
+
+/* ── Streaming content prose overrides ── */
+.streaming-content p {
+  margin-bottom: 0.5rem;
+}
+.streaming-content p:last-child {
+  margin-bottom: 0;
+}
+.streaming-content .inline > div {
+  display: inline;
+}
+.streaming-content .inline > div > p {
+  display: inline;
+}
+
+/* ── KaTeX math display styling ── */
+
+/* Display math blocks ($$...$$) */
+.streaming-content .katex-display {
+  margin: 1rem 0;
+  padding: 0.75rem 1rem;
+  overflow-x: auto;
+  overflow-y: hidden;
+  background: rgba(249, 250, 251, 0.6);
+  border-radius: 0.5rem;
+  border: 1px solid rgba(229, 231, 235, 0.5);
+  /* Isolate KaTeX layout reflows from the rest of the page */
+  contain: layout;
+}
+.dark .streaming-content .katex-display {
+  background: rgba(31, 41, 55, 0.4);
+  border-color: rgba(75, 85, 99, 0.4);
+}
+
+/* Inline math ($...$) */
+.streaming-content .katex {
+  font-size: 1.05em;
+}
+
+/* Math rendering error fallback */
+.streaming-content .katex-error {
+  color: #ef4444;
+  font-family: "Monaco", "Courier New", monospace;
+  font-size: 0.85em;
+  background: #fef2f2;
+  padding: 2px 6px;
+  border-radius: 4px;
+}
+.dark .streaming-content .katex-error {
+  background: rgba(127, 29, 29, 0.2);
+  color: #fca5a5;
+}

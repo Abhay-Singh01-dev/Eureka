@@ -1,0 +1,366 @@
+/*
+ * ScreenStyles.css
+ * Styles for the Brilliant-style progressive disclosure system.
+ * All classes prefixed with `scrn-` to avoid collisions.
+ */
+
+/* ════════════════════════════════════════════════════════════
+   Container (no card — content sits directly on the page)
+   ════════════════════════════════════════════════════════════ */
+
+.scrn-container {
+  display: flex;
+  flex-direction: column;
+}
+
+.scrn-content-area {
+  position: relative;
+}
+
+.scrn-footer {
+  padding: 16px 0 0;
+}
+
+/* ════════════════════════════════════════════════════════════
+   Progress Bubbles
+   ════════════════════════════════════════════════════════════ */
+
+.scrn-bubble {
+  display: inline-block;
+  border-radius: 50%;
+  transition: all 0.3s ease;
+  flex-shrink: 0;
+}
+
+/* Completed — solid blue */
+.scrn-bubble--completed {
+  width: 10px;
+  height: 10px;
+  background: #3b82f6;
+  border: none;
+  box-shadow: 0 1px 3px rgba(59, 130, 246, 0.3);
+}
+
+/* Current — blue with ring + pulse */
+.scrn-bubble--current {
+  width: 14px;
+  height: 14px;
+  background: #3b82f6;
+  border: 2.5px solid #dbeafe;
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.18);
+  animation: scrn-pulse 2s ease-in-out infinite;
+}
+
+@keyframes scrn-pulse {
+  0%,
+  100% {
+    transform: scale(1);
+    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.18);
+  }
+  50% {
+    transform: scale(1.12);
+    box-shadow: 0 0 0 5px rgba(59, 130, 246, 0.1);
+  }
+}
+
+/* Future — gray outline */
+.scrn-bubble--future {
+  width: 10px;
+  height: 10px;
+  background: transparent;
+  border: 2px solid #d1d5db;
+}
+
+:is(.dark) .scrn-bubble--future {
+  border-color: #4b5563;
+}
+
+/* Completing animation */
+.scrn-bubble--completing {
+  animation: scrn-bubble-pop 0.3s ease-out;
+}
+
+@keyframes scrn-bubble-pop {
+  0% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.35);
+    background: #10b981;
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+
+/* ════════════════════════════════════════════════════════════
+   Continue Button
+   ════════════════════════════════════════════════════════════ */
+
+.scrn-continue {
+  width: 100%;
+  padding: 14px 24px;
+  border-radius: 12px;
+  font-size: 15px;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  transition: all 0.2s ease;
+  cursor: pointer;
+  border: none;
+  outline: none;
+  user-select: none;
+}
+
+.scrn-continue:focus-visible {
+  outline: 2px solid #3b82f6;
+  outline-offset: 2px;
+}
+
+/* Locked */
+.scrn-continue--locked {
+  background: #e5e7eb;
+  color: #9ca3af;
+  cursor: not-allowed;
+  opacity: 0.7;
+}
+
+:is(.dark) .scrn-continue--locked {
+  background: #374151;
+  color: #6b7280;
+}
+
+/* Unlocked */
+.scrn-continue--unlocked {
+  background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+  color: white;
+  box-shadow: 0 4px 14px rgba(59, 130, 246, 0.25);
+}
+
+.scrn-continue--unlocked:hover {
+  background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%);
+  transform: translateY(-1px);
+  box-shadow: 0 6px 18px rgba(59, 130, 246, 0.3);
+}
+
+.scrn-continue--unlocked:active {
+  transform: translateY(0);
+}
+
+/* Clicked (brief success) */
+.scrn-continue--clicked {
+  background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+  color: white;
+  cursor: default;
+}
+
+/* Just-unlocked pop */
+@keyframes scrn-unlock-pop {
+  0% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.04);
+    box-shadow: 0 8px 22px rgba(59, 130, 246, 0.35);
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+
+/* ════════════════════════════════════════════════════════════
+   Sound toggle (in card header)
+   ════════════════════════════════════════════════════════════ */
+
+.scrn-sound-toggle {
+  width: 30px;
+  height: 30px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  border: 1.5px solid #e5e7eb;
+  background: white;
+  color: #6b7280;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+:is(.dark) .scrn-sound-toggle {
+  background: #374151;
+  border-color: #4b5563;
+  color: #9ca3af;
+}
+
+.scrn-sound-toggle:hover {
+  border-color: #3b82f6;
+  color: #3b82f6;
+}
+
+/* ════════════════════════════════════════════════════════════
+   Choice cards (Screens 2, 7)
+   ════════════════════════════════════════════════════════════ */
+
+.scrn-choice {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 16px 18px;
+  background: white;
+  border: 2px solid #e5e7eb;
+  border-radius: 12px;
+  text-align: left;
+  cursor: pointer;
+  transition: all 0.18s ease;
+}
+
+:is(.dark) .scrn-choice {
+  background: #1f2937;
+  border-color: #374151;
+}
+
+.scrn-choice:hover {
+  border-color: #3b82f6;
+  background: #f9fafb;
+  transform: translateX(3px);
+}
+
+:is(.dark) .scrn-choice:hover {
+  background: #111827;
+}
+
+.scrn-choice--selected {
+  border-color: #3b82f6 !important;
+  background: linear-gradient(135deg, #eff6ff 0%, #dbeafe 100%) !important;
+}
+
+:is(.dark) .scrn-choice--selected {
+  background: linear-gradient(
+    135deg,
+    rgba(59, 130, 246, 0.15) 0%,
+    rgba(59, 130, 246, 0.08) 100%
+  ) !important;
+}
+
+/* ════════════════════════════════════════════════════════════
+   Quiz options (Screen 5)
+   ════════════════════════════════════════════════════════════ */
+
+.scrn-quiz-option {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 14px 16px;
+  background: white;
+  border: 2px solid #e5e7eb;
+  border-radius: 12px;
+  text-align: left;
+  cursor: pointer;
+  transition: all 0.18s ease;
+}
+
+:is(.dark) .scrn-quiz-option {
+  background: #1f2937;
+  border-color: #374151;
+}
+
+.scrn-quiz-option:hover {
+  border-color: #3b82f6;
+  background: #f9fafb;
+}
+
+.scrn-quiz-letter {
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  background: #e5e7eb;
+  color: #6b7280;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 700;
+  font-size: 14px;
+  flex-shrink: 0;
+  transition: all 0.18s ease;
+}
+
+:is(.dark) .scrn-quiz-letter {
+  background: #374151;
+  color: #9ca3af;
+}
+
+.scrn-quiz-letter--selected {
+  background: #3b82f6 !important;
+  color: white !important;
+}
+
+.scrn-quiz--correct {
+  border-color: #10b981 !important;
+  background: linear-gradient(135deg, #d1fae5 0%, #a7f3d0 100%) !important;
+}
+
+:is(.dark) .scrn-quiz--correct {
+  background: linear-gradient(
+    135deg,
+    rgba(16, 185, 129, 0.15) 0%,
+    rgba(16, 185, 129, 0.08) 100%
+  ) !important;
+}
+
+.scrn-quiz--incorrect {
+  border-color: #ef4444 !important;
+  background: linear-gradient(135deg, #fee2e2 0%, #fecaca 100%) !important;
+}
+
+:is(.dark) .scrn-quiz--incorrect {
+  background: linear-gradient(
+    135deg,
+    rgba(239, 68, 68, 0.12) 0%,
+    rgba(239, 68, 68, 0.06) 100%
+  ) !important;
+}
+
+/* ════════════════════════════════════════════════════════════
+   Scrollable screen content marker
+   ════════════════════════════════════════════════════════════ */
+
+.scrn-scrollable {
+  /* This class is a marker for the ScreenManager's scroll handler.
+     It also ensures content can be scrolled within the card. */
+  padding-bottom: 24px;
+}
+
+/* ════════════════════════════════════════════════════════════
+   Mobile responsive
+   ════════════════════════════════════════════════════════════ */
+
+@media (max-width: 768px) {
+  .scrn-card {
+    border-radius: 16px;
+    max-height: calc(100vh - 200px);
+    min-height: 360px;
+  }
+
+  .scrn-bubble--completed,
+  .scrn-bubble--future {
+    width: 8px;
+    height: 8px;
+  }
+
+  .scrn-bubble--current {
+    width: 12px;
+    height: 12px;
+  }
+
+  .scrn-continue {
+    padding: 12px 20px;
+    font-size: 14px;
+  }
+
+  .scrn-choice,
+  .scrn-quiz-option {
+    padding: 12px 14px;
+  }
+}

@@ -1,0 +1,58 @@
+{
+  "meta": {
+    "title": "What is Motion?",
+    "totalDuration": 180,
+    "style": "3blue1brown-curiosity",
+    "note": "Trimmed to ~13 chars/sec = safe for Azure TTS at 0.95 rate"
+  },
+  "scenes": [
+    {
+      "id": "scene_01",
+      "title": "Opening Question",
+      "startTime": 0.0,
+      "endTime": 22.0,
+      "duration": 22.0,
+      "text": "Here's a question that sounds simple, but it isn't. Are you moving right now? You'd probably say no. But what if that's completely wrong? What if, right now, you're hurtling through space at hundreds of thousands of kilometers per hour?"
+    },
+    {
+      "id": "scene_02",
+      "title": "Cosmic Zoom-Out",
+      "startTime": 22.0,
+      "endTime": 55.0,
+      "duration": 33.0,
+      "text": "Let me show you. Earth is spinning — and you're on it — at 1,670 kilometers per hour. But that's just the beginning. Earth orbits the Sun at 107,000 kilometers per hour. And our solar system moves through the galaxy at 720,000 kilometers per hour. So, are you sitting still? That depends entirely on what you compare yourself to."
+    },
+    {
+      "id": "scene_03",
+      "title": "Reference Frames",
+      "startTime": 55.0,
+      "endTime": 83.0,
+      "duration": 28.0,
+      "text": "This is one of the most beautiful ideas in physics: motion is relative. A ball on a moving train looks different to three observers. On the ground, it's moving. On the train, it's still. From a bird above, both are moving. Same moment, three answers — all correct."
+    },
+    {
+      "id": "scene_04",
+      "title": "Galileo's Ship",
+      "startTime": 83.0,
+      "endTime": 110.0,
+      "duration": 27.0,
+      "text": "Galileo saw this 400 years ago. A sailor drops a ball from a ship's mast. You'd expect it to land behind the mast, since the ship moved forward. But it lands at the base. The ball was already moving with the ship. This insight changed physics forever."
+    },
+    {
+      "id": "scene_05",
+      "title": "Everyday Examples",
+      "startTime": 110.0,
+      "endTime": 155.0,
+      "duration": 45.0,
+      "text": "You experience this every day. Walk inside a plane going 900 kilometers per hour — you feel normal. But relative to the ground, you're at 905. On a highway, a car at your speed looks still, while trees blur past. And here's something beautiful: the Moon is constantly falling toward Earth. Gravity pulls it in. But the Moon moves sideways so fast, it keeps missing. That's what an orbit is — falling and missing, forever."
+    },
+    {
+      "id": "scene_06",
+      "title": "The Big Reveal",
+      "startTime": 155.0,
+      "endTime": 180.0,
+      "duration": 25.0,
+      "text": "Here's the truth. Motion is always relative to a reference frame. There is no absolute motion in the universe. And standing still is just a choice of perspective. Einstein built his theory of relativity on this idea. Now you understand it too."
+    }
+  ]
+}

@@ -1,0 +1,15 @@
+# Manim build artefacts
+output/
+media/
+__pycache__/
+*.pyc
+
+# Virtual environment
+.venv/
+
+# IDE
+.vscode/
+.idea/
+
+# Environment
+.env

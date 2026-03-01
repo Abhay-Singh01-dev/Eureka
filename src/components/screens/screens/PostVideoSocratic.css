@@ -1,0 +1,549 @@
+/*
+ * PostVideoSocratic.css
+ * Styles for Phase 3 — Post-Video Socratic Dialogue.
+ * All class names prefixed with `socratic-` to avoid collisions.
+ */
+
+/* ════════════════════════════════════════════════════════════
+   Root container
+   ════════════════════════════════════════════════════════════ */
+
+.socratic-root {
+  max-height: calc(100vh - 180px);
+  overflow-y: auto;
+  scroll-behavior: smooth;
+}
+
+/* ════════════════════════════════════════════════════════════
+   Conversation layout
+   ════════════════════════════════════════════════════════════ */
+
+.socratic-conversation {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.socratic-message-group {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+/* ════════════════════════════════════════════════════════════
+   Avatar
+   ════════════════════════════════════════════════════════════ */
+
+.socratic-avatar-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.socratic-avatar {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #3b82f6 0%, #6366f1 100%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  transition: transform 0.3s ease;
+}
+
+.socratic-avatar--active {
+  animation: socratic-pulse 2s ease-in-out infinite;
+}
+
+.socratic-avatar--thinking {
+  animation: socratic-think-pulse 0.6s ease-in-out infinite;
+}
+
+@keyframes socratic-pulse {
+  0%,
+  100% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.05);
+  }
+}
+
+@keyframes socratic-think-pulse {
+  0%,
+  100% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.1);
+  }
+}
+
+.socratic-name {
+  font-size: 14px;
+  font-weight: 600;
+  color: #374151;
+}
+
+:is(.dark) .socratic-name {
+  color: #e5e7eb;
+}
+
+.socratic-thinking {
+  font-size: 13px;
+  color: #6b7280;
+  font-style: italic;
+  animation: socratic-fade-loop 1.5s ease-in-out infinite;
+}
+
+@keyframes socratic-fade-loop {
+  0%,
+  100% {
+    opacity: 0.5;
+  }
+  50% {
+    opacity: 1;
+  }
+}
+
+/* ════════════════════════════════════════════════════════════
+   Question bubble
+   ════════════════════════════════════════════════════════════ */
+
+.socratic-question {
+  background: linear-gradient(135deg, #eff6ff 0%, #dbeafe 100%);
+  border: 2px solid #3b82f6;
+  border-radius: 16px;
+  padding: 24px;
+  max-width: 650px;
+  box-shadow: 0 4px 16px rgba(59, 130, 246, 0.15);
+}
+
+:is(.dark) .socratic-question {
+  background: linear-gradient(
+    135deg,
+    rgba(59, 130, 246, 0.12) 0%,
+    rgba(59, 130, 246, 0.06) 100%
+  );
+  border-color: #2563eb;
+}
+
+/* ════════════════════════════════════════════════════════════
+   Response bubble
+   ════════════════════════════════════════════════════════════ */
+
+.socratic-response {
+  background: white;
+  border: 1.5px solid #e5e7eb;
+  border-radius: 16px;
+  border-top-left-radius: 6px;
+  padding: 20px 24px;
+  max-width: 650px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+}
+
+:is(.dark) .socratic-response {
+  background: #1f2937;
+  border-color: #374151;
+}
+
+/* ════════════════════════════════════════════════════════════
+   Text styles
+   ════════════════════════════════════════════════════════════ */
+
+.socratic-text {
+  font-size: 16px;
+  line-height: 1.7;
+  color: #1f2937;
+  margin: 0;
+}
+
+:is(.dark) .socratic-text {
+  color: #e5e7eb;
+}
+
+.socratic-emphasis {
+  font-weight: 600;
+  color: #1e40af;
+}
+
+:is(.dark) .socratic-emphasis {
+  color: #93c5fd;
+}
+
+.socratic-reassurance {
+  font-style: italic;
+  color: #6b7280;
+  font-size: 15px;
+}
+
+:is(.dark) .socratic-reassurance {
+  color: #9ca3af;
+}
+
+/* ════════════════════════════════════════════════════════════
+   Cursor (streaming indicator)
+   ════════════════════════════════════════════════════════════ */
+
+.socratic-cursor {
+  display: inline-block;
+  margin-left: 2px;
+  color: #3b82f6;
+  font-size: 0.85em;
+  line-height: 1;
+  animation: socratic-blink 1s step-end infinite;
+}
+
+@keyframes socratic-blink {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0;
+  }
+}
+
+/* ════════════════════════════════════════════════════════════
+   Choice buttons
+   ════════════════════════════════════════════════════════════ */
+
+.socratic-choices {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  max-width: 550px;
+}
+
+.socratic-choice-btn {
+  background: white;
+  border: 2px solid #e5e7eb;
+  border-radius: 12px;
+  padding: 16px 20px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  font-size: 16px;
+  color: #374151;
+  text-align: left;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+  width: 100%;
+}
+
+:is(.dark) .socratic-choice-btn {
+  background: #1f2937;
+  border-color: #374151;
+  color: #e5e7eb;
+}
+
+.socratic-choice-btn:hover {
+  background: #f9fafb;
+  border-color: #3b82f6;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(59, 130, 246, 0.15);
+}
+
+:is(.dark) .socratic-choice-btn:hover {
+  background: #111827;
+  border-color: #3b82f6;
+}
+
+.socratic-choice-btn:active {
+  transform: translateY(0);
+  box-shadow: 0 2px 4px rgba(59, 130, 246, 0.2);
+}
+
+.socratic-choice-btn--selected {
+  background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%) !important;
+  border-color: #1e40af !important;
+  color: white !important;
+  box-shadow: 0 4px 16px rgba(59, 130, 246, 0.3) !important;
+  cursor: default;
+  pointer-events: none;
+  transform: none !important;
+}
+
+.socratic-choice-icon {
+  font-size: 20px;
+  flex-shrink: 0;
+  width: 28px;
+  text-align: center;
+}
+
+/* ════════════════════════════════════════════════════════════
+   Thinking dots indicator
+   ════════════════════════════════════════════════════════════ */
+
+.socratic-thinking-indicator {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 0;
+}
+
+.socratic-dots {
+  display: flex;
+  gap: 5px;
+}
+
+.socratic-dots span {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #9ca3af;
+  animation: socratic-dot-bounce 1.2s ease-in-out infinite;
+}
+
+.socratic-dots span:nth-child(2) {
+  animation-delay: 0.15s;
+}
+
+.socratic-dots span:nth-child(3) {
+  animation-delay: 0.3s;
+}
+
+@keyframes socratic-dot-bounce {
+  0%,
+  80%,
+  100% {
+    transform: translateY(0);
+    opacity: 0.4;
+  }
+  40% {
+    transform: translateY(-6px);
+    opacity: 1;
+  }
+}
+
+:is(.dark) .socratic-dots span {
+  background: #6b7280;
+}
+
+/* ════════════════════════════════════════════════════════════
+   Reflection card
+   ════════════════════════════════════════════════════════════ */
+
+.socratic-reflection-card {
+  background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%);
+  border: 2px solid #f59e0b;
+  border-radius: 16px;
+  padding: 24px;
+  max-width: 650px;
+  box-shadow: 0 4px 16px rgba(245, 158, 11, 0.15);
+}
+
+:is(.dark) .socratic-reflection-card {
+  background: linear-gradient(
+    135deg,
+    rgba(245, 158, 11, 0.12) 0%,
+    rgba(245, 158, 11, 0.06) 100%
+  );
+  border-color: #b45309;
+}
+
+.socratic-textarea-wrap {
+  position: relative;
+}
+
+.socratic-textarea {
+  width: 100%;
+  min-height: 80px;
+  padding: 12px 16px;
+  border: 2px solid #e5e7eb;
+  border-radius: 12px;
+  font-size: 15px;
+  line-height: 1.6;
+  color: #1f2937;
+  background: white;
+  resize: vertical;
+  transition: border-color 0.2s ease;
+  font-family: inherit;
+}
+
+.socratic-textarea:focus {
+  outline: none;
+  border-color: #3b82f6;
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.12);
+}
+
+:is(.dark) .socratic-textarea {
+  background: #111827;
+  border-color: #374151;
+  color: #e5e7eb;
+}
+
+:is(.dark) .socratic-textarea:focus {
+  border-color: #3b82f6;
+}
+
+.socratic-textarea::placeholder {
+  color: #9ca3af;
+}
+
+/* ════════════════════════════════════════════════════════════
+   Buttons
+   ════════════════════════════════════════════════════════════ */
+
+.socratic-btn-primary {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 20px;
+  border-radius: 10px;
+  font-size: 14px;
+  font-weight: 600;
+  color: white;
+  background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+  border: none;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  box-shadow: 0 2px 8px rgba(59, 130, 246, 0.25);
+}
+
+.socratic-btn-primary:hover {
+  background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3);
+}
+
+.socratic-btn-primary:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  transform: none;
+}
+
+.socratic-btn-secondary {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 20px;
+  border-radius: 10px;
+  font-size: 14px;
+  font-weight: 500;
+  color: #6b7280;
+  background: transparent;
+  border: 1.5px solid #d1d5db;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.socratic-btn-secondary:hover {
+  border-color: #9ca3af;
+  color: #374151;
+}
+
+:is(.dark) .socratic-btn-secondary {
+  border-color: #4b5563;
+  color: #9ca3af;
+}
+
+:is(.dark) .socratic-btn-secondary:hover {
+  border-color: #6b7280;
+  color: #e5e7eb;
+}
+
+.socratic-btn-go {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 14px 32px;
+  border-radius: 12px;
+  font-size: 16px;
+  font-weight: 700;
+  color: white;
+  background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+  border: none;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  box-shadow: 0 4px 16px rgba(16, 185, 129, 0.25);
+}
+
+.socratic-btn-go:hover {
+  background: linear-gradient(135deg, #059669 0%, #047857 100%);
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(16, 185, 129, 0.3);
+}
+
+.socratic-btn-go:active {
+  transform: translateY(0);
+}
+
+/* ════════════════════════════════════════════════════════════
+   Transition wrap
+   ════════════════════════════════════════════════════════════ */
+
+.socratic-transition-wrap {
+  display: flex;
+  justify-content: center;
+  padding-top: 8px;
+}
+
+/* ════════════════════════════════════════════════════════════
+   Reduced motion
+   ════════════════════════════════════════════════════════════ */
+
+@media (prefers-reduced-motion: reduce) {
+  .socratic-cursor {
+    display: none;
+  }
+  .socratic-avatar--active,
+  .socratic-avatar--thinking {
+    animation: none;
+  }
+  .socratic-dots span {
+    animation: none;
+    opacity: 0.7;
+  }
+  .socratic-choice-btn {
+    transition: none;
+  }
+  .socratic-thinking {
+    animation: none;
+  }
+}
+
+/* ════════════════════════════════════════════════════════════
+   Mobile responsive
+   ════════════════════════════════════════════════════════════ */
+
+@media (max-width: 768px) {
+  .socratic-root {
+    max-height: calc(100vh - 140px);
+  }
+
+  .socratic-question,
+  .socratic-response,
+  .socratic-reflection-card {
+    padding: 16px;
+    max-width: 100%;
+  }
+
+  .socratic-text {
+    font-size: 14px;
+    line-height: 1.6;
+  }
+
+  .socratic-choice-btn {
+    padding: 12px 16px;
+    font-size: 14px;
+  }
+
+  .socratic-choices {
+    max-width: 100%;
+  }
+
+  .socratic-avatar {
+    width: 30px;
+    height: 30px;
+  }
+
+  .socratic-btn-go {
+    padding: 12px 24px;
+    font-size: 15px;
+    width: 100%;
+    justify-content: center;
+  }
+}
