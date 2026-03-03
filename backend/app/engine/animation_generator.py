@@ -20,31 +20,17 @@ import uuid
 from typing import Any, Dict, List, Optional
 
 import httpx
-from pymongo import MongoClient
+
+from app.config import AZURE_OPENAI_ENDPOINT, AZURE_OPENAI_API_KEY
+from app.database import get_db
 
 logger = logging.getLogger(__name__)
 
-# ── Config ────────────────────────────────────────────────────────────────
-
-MONGO_URI = os.getenv("MONGO_URI", "mongodb://localhost:27017")
-MONGO_DB = os.getenv("MONGO_DB", "eureka")
-
-_mongo: Optional[MongoClient] = None
+# ── Config (centralised in app.config / app.database) ─────────────────────
 
 
 def _db():
-    global _mongo
-    if _mongo is None:
-        _mongo = MongoClient(MONGO_URI)
-    return _mongo[MONGO_DB]
-
-
-def _get_azure_endpoint():
-    return os.getenv("AZURE_OPENAI_ENDPOINT", "")
-
-
-def _get_azure_key():
-    return os.getenv("AZURE_OPENAI_API_KEY", "")
+    return get_db()
 
 
 # ── GPT-5.2 Call ──────────────────────────────────────────────────────────
@@ -52,8 +38,8 @@ def _get_azure_key():
 
 async def _call_gpt(prompt: str, system: str | None = None, max_tokens: int = 4000) -> Dict:
     """Call Azure OpenAI GPT-5.2 and return parsed JSON."""
-    endpoint = _get_azure_endpoint()
-    key = _get_azure_key()
+    endpoint = AZURE_OPENAI_ENDPOINT
+    key = AZURE_OPENAI_API_KEY
 
     if not endpoint or not key:
         raise ValueError("Azure OpenAI credentials not configured")
@@ -101,6 +87,7 @@ def _get_narration_style(depth: int) -> str:
 - No poetic or metaphorical language
 - Maximum 40 words per narration segment
 - Focus on what is happening visually
+- Always include reassurance — never leave the learner feeling confused
 - Example: "The ball moves to the right. Its speed increases as gravity pulls it down."
 """
     elif depth <= 4:
@@ -119,6 +106,204 @@ def _get_narration_style(depth: int) -> str:
 - Encourage mathematical intuition
 - Example: "Watch how the gradient field reveals the topology of the energy landscape — each contour line traces a path of constant potential, and the steepest descent always cuts perpendicular to these contours."
 """
+
+
+# ── Depth-Scaled Cognitive Tension ────────────────────────────────────────
+
+
+def _get_tension_config(depth: int) -> Dict[str, str]:
+    """Return depth-appropriate cognitive tension parameters."""
+    if depth <= 2:
+        return {
+            "tension_type": "Curiosity-Based",
+            "tension_intensity": "Light",
+            "rules": (
+                "Use a concrete, relatable question as the tension hook. "
+                "No abstract paradox. No formal contradiction. No competing models. "
+                "Frame as 'Why does this happen?' or 'What would happen if...?' "
+                "Avoid technical language. "
+                "Tension must feel like curiosity, NOT confusion. "
+                "Always include reassurance in narration."
+            ),
+            "example_pattern": "Why does this arrow change length when we stretch the grid?",
+            "forbidden": (
+                "Do NOT use paradox framing. "
+                "Do NOT use contradiction language. "
+                "Do NOT use 'this seems wrong' phrasing. "
+                "Do NOT use heavy abstract terminology. "
+                "Do NOT include formal proofs."
+            ),
+        }
+    elif depth <= 4:
+        return {
+            "tension_type": "Conceptual Misalignment",
+            "tension_intensity": "Moderate",
+            "rules": (
+                "Present an intuitive expectation, then show it is incomplete. "
+                "Introduce a small mismatch between intuition and reality. "
+                "Begin hinting at formal reasoning without overwhelming. "
+                "Trigger structural thinking without destabilising confidence."
+            ),
+            "example_pattern": "If vectors are just arrows, why do their coordinates matter so much?",
+            "forbidden": "",
+        }
+    elif depth <= 6:
+        return {
+            "tension_type": "Structural Constraint",
+            "tension_intensity": "Strong",
+            "rules": (
+                "Present competing interpretations. Introduce an edge case. "
+                "Show the limitation of naive intuition. "
+                "Require a structural resolution that connects abstract pieces. "
+                "Force reconciliation of abstract structure."
+            ),
+            "example_pattern": "If scaling changes area, what exactly determines how much it changes?",
+            "forbidden": "",
+        }
+    else:  # depth 7
+        return {
+            "tension_type": "Theoretical Instability",
+            "tension_intensity": "High",
+            "rules": (
+                "Introduce a failure case or boundary condition. "
+                "Present generalisation pressure. Require formal resolution. "
+                "Include at least one structural limitation discussion. "
+                "Include at least one generalisation statement. "
+                "Include at least one formal statement in narration. "
+                "Drive inevitability through constraint reasoning."
+            ),
+            "example_pattern": "If determinant measures area scaling, what happens in non-Euclidean spaces?",
+            "forbidden": "",
+        }
+
+
+def _get_depth_structural_rules(depth: int) -> str:
+    """Return structural rules that control what elements appear at each depth."""
+    if depth <= 2:
+        return """DEPTH STRUCTURAL RULES (Elementary / Middle School):
+- No formal derivations
+- No symbolic density
+- Strong visual grounding — everything must be concrete and visible
+- Analogy-first narration
+- No edge cases
+- No generalisation scene auto-insert
+- Keep equations extremely simple (single variable, basic operations)"""
+    elif depth <= 4:
+        return """DEPTH STRUCTURAL RULES (High School / Undergraduate):
+- Introduce equations AFTER visuals, never before
+- Show simple derivations with clear step-by-step annotation
+- Connect algebra ↔ geometry explicitly
+- May include one counterexample
+- Balance symbolic and visual representation"""
+    elif depth <= 6:
+        return """DEPTH STRUCTURAL RULES (Advanced / Graduate):
+- Include derivation scenes when appropriate
+- Include edge case or limitation
+- Include formal constraint explanation
+- Include brief generalisation
+- Layer visual → equation → abstract insight"""
+    else:
+        return """DEPTH STRUCTURAL RULES (Research):
+- Must include edge case or failure mode
+- Must include generalisation beyond the example
+- Explicit abstraction layer required
+- Derivation scenes expected
+- Formal constraint explanation required
+- If possible, connect to broader mathematical/scientific structure"""
+
+
+def _get_reveal_pace_instructions(pace: str) -> str:
+    """Return pacing instructions for the AI generator."""
+    if pace == "slow":
+        return """REVEAL PACE: SLOW TENSION BUILD
+- Delay equations — they should appear only after visual understanding is established
+- Layer visual elements step-by-step, one concept at a time
+- Include narration pauses (wait animations) between major reveals
+- Build anticipation before each key insight
+- Use 'indicate' animations before 'create' for emphasis"""
+    elif pace == "fast":
+        return """REVEAL PACE: FAST REVEAL
+- Shorter buildup — get to the key insight quickly
+- Earlier compression — connect pieces rapidly
+- Equations can appear alongside visuals
+- Minimise wait times between reveals
+- Efficient, dense visual sequencing"""
+    else:  # moderate
+        return """REVEAL PACE: MODERATE BUILD
+- Balanced pacing between visual buildup and equation reveal
+- Allow time for each concept to settle before introducing the next
+- Standard narration density
+- Use natural transition timing"""
+
+
+def _get_scene_role_instructions(role: str | None) -> str:
+    """Return cognitive role instructions for a specific scene."""
+    roles = {
+        "introduce_tension": (
+            "SCENE ROLE: INTRODUCE TENSION\n"
+            "This scene must establish the core cognitive question. "
+            "Present the setup that creates curiosity or dissonance. "
+            "End this scene with the learner feeling 'I want to know why.'"
+        ),
+        "build_structure": (
+            "SCENE ROLE: BUILD STRUCTURE\n"
+            "This scene adds building blocks toward understanding. "
+            "Introduce one key concept or visual element. "
+            "Connect it to what was shown before."
+        ),
+        "show_counterexample": (
+            "SCENE ROLE: SHOW COUNTEREXAMPLE\n"
+            "This scene must present a case that challenges the intuitive expectation. "
+            "Show why the simple mental model is insufficient. "
+            "Create productive confusion that motivates deeper understanding."
+        ),
+        "reveal_constraint": (
+            "SCENE ROLE: REVEAL CONSTRAINT\n"
+            "This scene reveals the structural rule or constraint that explains the pattern. "
+            "The 'aha' moment begins here. "
+            "Show why the structure MUST be this way."
+        ),
+        "formalize_equation": (
+            "SCENE ROLE: FORMALIZE WITH EQUATION\n"
+            "This scene introduces the formal mathematical statement. "
+            "The equation should feel like a natural compression of what was visually shown. "
+            "Annotate every symbol with its visual meaning."
+        ),
+        "generalize": (
+            "SCENE ROLE: GENERALIZE\n"
+            "This scene extends the insight beyond the specific example. "
+            "Show that the principle applies more broadly. "
+            "Connect to larger mathematical/scientific structure."
+        ),
+        "compress_insight": (
+            "SCENE ROLE: COMPRESS INSIGHT\n"
+            "This is the culmination scene. The learner should feel inevitability. "
+            "Compress everything into a single clear statement. "
+            "The compression goal from the blueprint MUST be achieved here. "
+            "End with the learner feeling: 'Of course — it could not have been any other way.'"
+        ),
+        "recap": (
+            "SCENE ROLE: RECAP\n"
+            "Briefly recapitulate the key points covered. "
+            "Reinforce the compression statement. "
+            "This should be concise, not introduce new material."
+        ),
+        "highlight_invariant": (
+            "SCENE ROLE: HIGHLIGHT INVARIANT\n"
+            "Visually isolate and emphasize the property that does NOT change "
+            "even as other elements transform. Use persistent color, glow, "
+            "or visual anchoring to make the invariant unmistakable. "
+            "The viewer must see: 'Everything else changed, but THIS stayed the same.'"
+        ),
+        "translate_representation": (
+            "SCENE ROLE: TRANSLATE REPRESENTATION\n"
+            "Transform the concept from one representation to another "
+            "(e.g., geometric to algebraic, graph to equation, visual to symbolic). "
+            "Show the mapping explicitly — each part of the source connects "
+            "to its counterpart in the target. The viewer must see the bridge."
+        ),
+    }
+    return roles.get(role or "", "")
 
 
 def _get_visual_type_instructions(visual_type: str) -> str:
@@ -185,6 +370,47 @@ Elements to define:
 - latex_elements: [{expression, position, size, color}]
 - groups: [{element_ids: [...], transform: {...}}]
 Animation: elements appear in sequence with draw/fade animations""",
+
+        "2d_diagram": """VISUAL TYPE: 2D EDUCATIONAL DIAGRAM (Manim-style)
+Elements to define:
+- bodies: [{id, shape: "circle"|"rect"|"custom", position: [x,y], color, label, size}]
+- arrows: [{id, from: [x,y], to: [x,y], label, color, style: "force"|"motion"|"reaction"}]
+- labels: [{text, position, color, font_size}]
+- annotations: [{text, position, arrow_to, color}] — explanatory callouts
+Animation sequence:
+1. Scene background/context appears
+2. Main bodies create in position
+3. Arrows draw in one by one with labels
+4. Key elements get emphasis animations (pulse/glow)
+Best for: free-body diagrams, biological processes, mechanical systems, flowcharts, step-by-step physical processes""",
+
+        "text_reveal": """VISUAL TYPE: TEXT REVEAL (Manim-style)
+Elements to define:
+- title: {text, position, font_size, color} — optional heading
+- bullet_points: [{text, indent: 0-3, color, reveal_style: "word"|"line"|"fade"}]
+- text_blocks: [{id, content, position, font_size, color}]
+- highlights: [{text_id, start_char, end_char, color}] — highlight key terms
+- background_box: optional {color, opacity} behind text region
+Animation sequence:
+1. Title or heading appears first
+2. Content reveals progressively (line by line)
+3. Key terms change color or glow to emphasise meaning
+4. Optional summary or call-to-action at end
+Best for: definition slides, summary screens, stated objectives, key concept lists""",
+
+        "equation_reveal": """VISUAL TYPE: EQUATION REVEAL (Manim-style)
+Elements to define:
+- equations: [{id, latex, position, size, color, label}]
+- steps: [{description, source_id, target_latex, annotation}] — algebraic derivation steps
+- sidebars: [{text, points_to_id, color}] — symbol/term definitions
+- boxes: [{around_id, color, label}] — highlight important results
+- cancellation_marks: [{element_id, color}] — strike-through for cancelling terms
+Animation sequence:
+1. Starting equation appears (write animation)
+2. Each step morphs from previous using TransformMatchingTex
+3. Sidebars and annotations fade in alongside each step
+4. Final result gets coloured box or glow emphasis
+Best for: algebraic derivations, proofs, dimensional analysis, step-by-step manipulation""",
     }
     return instructions.get(visual_type, instructions["2d_graph"])
 
@@ -197,24 +423,62 @@ def _build_scene_prompt(blueprint: Dict, scene: Dict) -> str:
     depth = blueprint.get("target_depth", 3)
     narration_style = _get_narration_style(depth)
     visual_instructions = _get_visual_type_instructions(scene.get("visual_type", "2d_graph"))
+    tension_config = _get_tension_config(depth)
+    depth_rules = _get_depth_structural_rules(depth)
+    pace_instructions = _get_reveal_pace_instructions(scene.get("reveal_pace", "moderate"))
+    role_instructions = _get_scene_role_instructions(scene.get("scene_role"))
+
+    # Cognitive tension context
+    core_tension = blueprint.get("core_tension") or "Not specified — infer from concept description"
+    compression_goal = blueprint.get("compression_goal") or "Not specified — infer from concept"
+    reveal_strategy = blueprint.get("reveal_strategy", "gradual_constraint_build").replace("_", " ").title()
 
     return f"""You are an expert educational animator in the style of 3Blue1Brown (Manim).
 You create precise, beautiful, mathematically clear animations.
 
-ANIMATION BLUEPRINT:
+Every animation must begin with a depth-appropriate cognitive tension.
+Depth determines the abstraction level of tension, not its existence.
+Tension must resolve into the compression goal by the final scene.
+
+═══ COGNITIVE STRUCTURE ═══
+
+CORE COGNITIVE TENSION:
+{core_tension}
+
+COMPRESSION GOAL (What should feel inevitable at the end):
+{compression_goal}
+
+REVEAL STRATEGY: {reveal_strategy}
+
+TENSION CONFIGURATION:
+- Type: {tension_config["tension_type"]}
+- Intensity: {tension_config["tension_intensity"]}
+- Rules: {tension_config["rules"]}
+- Example pattern: {tension_config["example_pattern"]}
+{("- FORBIDDEN: " + tension_config["forbidden"]) if tension_config["forbidden"] else ""}
+
+{depth_rules}
+
+═══ ANIMATION BLUEPRINT ═══
+
 - Title: {blueprint.get("title", "Untitled")}
 - Subject: {blueprint.get("subject", "")}
 - Concept: {blueprint.get("concept_description", "")}
 - Animation Type: {blueprint.get("animation_type", "Process")}
 - Cognitive Depth: {depth}/7
 
-SCENE TO GENERATE:
+═══ SCENE TO GENERATE ═══
+
 - Scene Number: {scene.get("scene_number", 1)} of {blueprint.get("scene_count", 1)}
 - Visual Type: {scene.get("visual_type", "2d_graph")}
 - Description: {scene.get("description", "")}
 - Duration: {scene.get("duration_seconds", 10)} seconds
-- Focus: {scene.get("highlight_focus", "main concept")}
+- Key Constraint / Insight: {scene.get("highlight_focus", "main concept")}
 - Narration: {scene.get("narration_type", "ai_narration")}
+
+{role_instructions}
+
+{pace_instructions}
 
 {visual_instructions}
 
@@ -269,9 +533,13 @@ RESPOND WITH VALID JSON:
 
 
 def _build_narration_prompt(blueprint: Dict, scene: Dict, raw_narration: str) -> str:
-    """Build prompt for refining narration with depth gating."""
+    """Build prompt for refining narration with depth gating + cognitive tension."""
     depth = blueprint.get("target_depth", 3)
     narration_style = _get_narration_style(depth)
+    tension_config = _get_tension_config(depth)
+    core_tension = blueprint.get("core_tension") or ""
+    compression_goal = blueprint.get("compression_goal") or ""
+    scene_role = scene.get("scene_role") or "not specified"
 
     return f"""You are refining narration for a 3Blue1Brown-style educational animation.
 
@@ -281,6 +549,14 @@ CONTEXT:
 - Scene {scene.get("scene_number", 1)}: {scene.get("description", "")}
 - Duration: {scene.get("duration_seconds", 10)} seconds
 - Cognitive Depth: {depth}/7
+- Scene Role: {scene_role}
+- Key Constraint: {scene.get("highlight_focus", "")}
+
+COGNITIVE STRUCTURE:
+- Core Tension: {core_tension}
+- Compression Goal: {compression_goal}
+- Tension Type for this depth: {tension_config["tension_type"]} ({tension_config["tension_intensity"]})
+{("- FORBIDDEN in narration: " + tension_config["forbidden"]) if tension_config["forbidden"] else ""}
 
 CURRENT NARRATION:
 {raw_narration}
@@ -295,6 +571,9 @@ REFINEMENT RULES:
 5. NEVER use condescending language
 6. No "obviously", "simply", "trivially", "as you should know"
 7. Split into timed segments that align with animation moments
+8. If this is the tension-introduction scene, the narration must pose the core question
+9. If this is the compression scene, the narration must deliver the inevitability feeling
+10. Narration tone must match the tension intensity for this depth level
 
 RESPOND WITH VALID JSON:
 {{
@@ -323,7 +602,7 @@ async def generate_scene_content(blueprint: Dict, scene: Dict) -> Dict:
     """
     prompt = _build_scene_prompt(blueprint, scene)
 
-    for attempt in range(2):
+    for attempt in range(3):  # 2 normal retries + 1 possible safety retry
         try:
             result = await _call_gpt(prompt, max_tokens=4000)
 
@@ -359,6 +638,34 @@ async def generate_scene_content(blueprint: Dict, scene: Dict) -> Dict:
                     pass  # usually too short to need filtering
             except ImportError:
                 logger.warning("Dignity filter not available, skipping")
+
+            # Depth-safety validation: beginner content must not contain
+            # advanced formal language that violates the depth contract
+            depth = blueprint.get("target_depth", 3)
+            if depth <= 2 and attempt == 0:
+                narration = (result.get("narration_text") or "").lower()
+                forbidden_markers = [
+                    "formal proof", "contradiction", "paradox",
+                    "non-trivial", "rigorous", "axiom", "theorem states",
+                    "by induction", "without loss of generality",
+                ]
+                violations = [m for m in forbidden_markers if m in narration]
+                if violations:
+                    logger.warning(
+                        "Depth %d safety violation in scene %d: found %s — regenerating",
+                        depth, scene.get("scene_number", 0), violations,
+                    )
+                    prompt += (
+                        "\n\nSAFETY OVERRIDE: This is depth "
+                        + str(depth)
+                        + " (beginner). "
+                        "Your narration contained advanced language: "
+                        + ", ".join(violations)
+                        + ". "
+                        "Rewrite ALL narration using simple, encouraging language. "
+                        "No formal proof terms. Use analogies and visual references."
+                    )
+                    continue  # retry with safety override
 
             logger.info(
                 "Scene %d content generated: %d elements, %d animations (attempt %d)",

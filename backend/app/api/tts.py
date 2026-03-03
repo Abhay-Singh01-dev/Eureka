@@ -20,6 +20,8 @@ import azure.cognitiveservices.speech as speechsdk
 from fastapi import APIRouter, HTTPException, Request
 from pydantic import BaseModel
 
+from app.config import AZURE_SPEECH_API_KEY, AZURE_SPEECH_REGION
+
 logger = logging.getLogger(__name__)
 
 router = APIRouter()
@@ -27,8 +29,8 @@ router = APIRouter()
 _DEFAULT_VOICE = "en-GB-SoniaNeural"
 AUDIO_TTL_HOURS = 72  # Clean up audio files older than this
 
-# ── Simple in-memory rate limiter (per-IP, 30 requests / 60 seconds) ───
-_RATE_LIMIT = 30
+# ── Simple in-memory rate limiter (per-IP, 120 requests / 60 seconds) ───
+_RATE_LIMIT = 120
 _RATE_WINDOW = 60  # seconds
 _rate_buckets: dict[str, list[float]] = defaultdict(list)
 
@@ -82,8 +84,8 @@ class TTSRequest(BaseModel):
 
 
 def _synthesise(file_path: str, text: str, voice: str, api_key: str, region: str) -> speechsdk.SpeechSynthesisResult:
-    """Run Azure TTS synchronously with a 10-second timeout."""
-    import concurrent.futures
+    """Run Azure TTS synchronously with a 15-second watchdog thread."""
+    import threading
 
     speech_config = speechsdk.SpeechConfig(subscription=api_key, region=region)
     speech_config.speech_synthesis_voice_name = voice
@@ -97,12 +99,36 @@ def _synthesise(file_path: str, text: str, voice: str, api_key: str, region: str
         audio_config=audio_config,
     )
 
-    future = synthesizer.speak_text_async(text)
-    try:
-        return future.get(timeout=10000)  # 10 second timeout (ms)
-    except Exception as e:
-        logger.error(f"[tts] Synthesis timed out or failed: {e}")
-        raise RuntimeError("TTS synthesis timed out") from e
+    # ResultFuture.get() accepts NO arguments — wrap in a thread with a watchdog
+    result_holder: list[speechsdk.SpeechSynthesisResult] = []
+    exc_holder: list[Exception] = []
+
+    def _call():
+        try:
+            result_holder.append(synthesizer.speak_text_async(text).get())
+        except Exception as e:
+            exc_holder.append(e)
+
+    t = threading.Thread(target=_call, daemon=True)
+    t.start()
+    t.join(timeout=15)  # 15-second wall-clock timeout
+
+    if t.is_alive():
+        raise RuntimeError("TTS synthesis timed out (15s)")
+    if exc_holder:
+        raise exc_holder[0]
+    if not result_holder:
+        raise RuntimeError("TTS synthesis produced no result")
+
+    # Explicitly release the SDK objects so Windows closes the file handle
+    # before we return. Without this the file may be 0 bytes when served.
+    del synthesizer
+    del audio_config
+    del speech_config
+    import time as _time
+    _time.sleep(0.1)  # give the OS a moment to flush
+
+    return result_holder[0]
 
 
 @router.post("/generate")
@@ -128,12 +154,20 @@ async def generate_tts(request: TTSRequest, req: Request) -> dict[str, str]:
     file_path = os.path.join("app", "static", "audio", file_name)
     audio_url = f"/static/audio/{file_name}"
 
-    if os.path.exists(file_path):
+    # Cache hit — only serve if the file has actual content (guard against
+    # 0-byte files left behind by previous failed syntheses).
+    if os.path.exists(file_path) and os.path.getsize(file_path) > 0:
         return {"audioUrl": audio_url}
+    elif os.path.exists(file_path):
+        # Stale 0-byte file from a previous failure — remove it and re-synthesise
+        try:
+            os.remove(file_path)
+        except OSError:
+            pass
 
     # ── Synthesise via Azure Neural TTS (non-blocking) ──────────────────
-    api_key = os.getenv("AZURE_SPEECH_API_KEY")
-    region = os.getenv("AZURE_SPEECH_REGION")
+    api_key = AZURE_SPEECH_API_KEY
+    region = AZURE_SPEECH_REGION
 
     if not api_key or not region:
         raise HTTPException(
@@ -156,6 +190,18 @@ async def generate_tts(request: TTSRequest, req: Request) -> dict[str, str]:
         raise HTTPException(
             status_code=503,
             detail="TTS synthesis timed out or failed. Use browser fallback.",
+        )
+
+    # Double-check the file actually has content before returning the URL.
+    # (Handles edge cases where synthesis "succeeded" but wrote nothing.)
+    if os.path.getsize(file_path) == 0:
+        try:
+            os.remove(file_path)
+        except OSError:
+            pass
+        raise HTTPException(
+            status_code=503,
+            detail="TTS synthesis produced an empty file.",
         )
 
     if result.reason != speechsdk.ResultReason.SynthesizingAudioCompleted:

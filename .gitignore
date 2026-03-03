@@ -33,6 +33,6 @@ mermaid.min.js
 # ── Misc ──
 difference.md
 *.log
-
+ANIMATION_BUILDER_FLOW.md
 # ── Cached TTS audio ──
 app/static/audio/

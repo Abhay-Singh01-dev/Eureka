@@ -7,11 +7,16 @@ Collections:
   - eureka.reflections            – student reflections
 """
 
+import logging
 import os
 from datetime import datetime, timezone
 
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
+
+from app.database import get_db
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter()
 
@@ -25,16 +30,12 @@ def _get_db():
         return _db
 
     try:
-        from pymongo import MongoClient
-
-        mongo_uri = os.getenv("MONGO_URI", os.getenv("MONGODB_URI", "mongodb://localhost:27017"))
-        client = MongoClient(mongo_uri, serverSelectionTimeoutMS=3000)
+        _db = get_db()
         # Quick ping to verify connection
-        client.admin.command("ping")
-        _db = client["eureka"]
+        _db.client.admin.command("ping")
         return _db
     except Exception as exc:
-        print(f"[analytics] MongoDB connection failed: {exc}")
+        logger.error("[analytics] MongoDB connection failed: %s", exc)
         return None
 
 
@@ -75,7 +76,7 @@ async def save_socratic_interaction(data: SocraticInteraction) -> dict:
         result = db["socratic_interactions"].insert_one(doc)
         return {"status": "saved", "id": str(result.inserted_id)}
     except Exception as exc:
-        print(f"[analytics] Failed to save socratic interaction: {exc}")
+        logger.error("Failed to save socratic interaction: %s", exc)
         return {"status": "error", "reason": str(exc)}
 
 
@@ -93,5 +94,5 @@ async def save_reflection(data: ReflectionSubmission) -> dict:
         result = db["reflections"].insert_one(doc)
         return {"status": "saved", "id": str(result.inserted_id)}
     except Exception as exc:
-        print(f"[analytics] Failed to save reflection: {exc}")
+        logger.error("Failed to save reflection: %s", exc)
         return {"status": "error", "reason": str(exc)}

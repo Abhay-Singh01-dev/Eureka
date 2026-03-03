@@ -24,6 +24,7 @@ import type {
   AnimationSubject,
   AnimationType,
   SceneStructure,
+  RevealStrategy,
 } from "@/types/animation";
 
 // ── Constants ──
@@ -65,6 +66,48 @@ const ANIMATION_TYPES: {
     icon: <Eye className="w-5 h-5" />,
     label: "Phenomenon",
     desc: "Visualise a natural or abstract phenomenon",
+  },
+];
+
+const REVEAL_STRATEGIES: {
+  value: RevealStrategy;
+  label: string;
+  desc: string;
+}[] = [
+  {
+    value: "gradual_constraint_build",
+    label: "Gradual Constraint Build",
+    desc: "Layer constraints one by one until the answer feels inevitable",
+  },
+  {
+    value: "counterexample_resolution",
+    label: "Counterexample Resolution",
+    desc: "Show a surprising failure, then build the correct framework",
+  },
+  {
+    value: "intuition_formalization",
+    label: "Intuition → Formalization",
+    desc: "Start with visual intuition, then translate to equations",
+  },
+  {
+    value: "visual_first_equation_later",
+    label: "Visual First, Equation Later",
+    desc: "Let the geometry speak before any symbols appear",
+  },
+  {
+    value: "equation_first_geometric",
+    label: "Equation First → Geometric",
+    desc: "Start with the equation, then reveal its geometric meaning",
+  },
+  {
+    value: "direct_demonstration",
+    label: "Direct Demonstration",
+    desc: "Show the transformation immediately, then unpack why it works",
+  },
+  {
+    value: "comparative_contrast",
+    label: "Comparative Contrast",
+    desc: "Show two cases side by side and extract the invariant between them",
   },
 ];
 
@@ -145,16 +188,24 @@ const AnimationBlueprintWizard: FC<AnimationBlueprintWizardProps> = ({
   const [conceptDescription, setConceptDescription] = useState("");
   const [targetDepth, setTargetDepth] = useState(3);
   const [animationType, setAnimationType] = useState<AnimationType>("Process");
+  const [coreTension, setCoreTension] = useState("");
+  const [compressionGoal, setCompressionGoal] = useState("");
 
   // Step 2 – Scene Structure
   const [sceneStructure, setSceneStructure] =
     useState<SceneStructure>("multi_scene");
   const [sceneCount, setSceneCount] = useState(3);
+  const [revealStrategy, setRevealStrategy] = useState<RevealStrategy>(
+    "gradual_constraint_build",
+  );
 
   // ── Navigation ──
 
   const canAdvanceStep1 =
-    title.trim().length > 0 && conceptDescription.trim().length > 0;
+    title.trim().length > 0 &&
+    conceptDescription.trim().length > 0 &&
+    coreTension.trim().length > 0 &&
+    compressionGoal.trim().length > 0;
 
   const canGenerate = sceneCount >= 1 && sceneCount <= 6;
 
@@ -181,6 +232,9 @@ const AnimationBlueprintWizard: FC<AnimationBlueprintWizardProps> = ({
       animation_type: animationType,
       scene_structure: sceneStructure,
       scene_count: sceneCount,
+      core_tension: coreTension.trim(),
+      compression_goal: compressionGoal.trim(),
+      reveal_strategy: revealStrategy,
     };
     onGenerate(blueprint);
   }, [
@@ -191,6 +245,9 @@ const AnimationBlueprintWizard: FC<AnimationBlueprintWizardProps> = ({
     animationType,
     sceneStructure,
     sceneCount,
+    coreTension,
+    compressionGoal,
+    revealStrategy,
     onGenerate,
   ]);
 
@@ -307,6 +364,40 @@ const AnimationBlueprintWizard: FC<AnimationBlueprintWizardProps> = ({
                     onChange={(e) => setConceptDescription(e.target.value)}
                     rows={3}
                     placeholder="e.g. Show how any periodic function can be decomposed into a sum of sine and cosine waves, starting with a simple square wave..."
+                    className="w-full rounded-lg bg-gray-50 dark:bg-white/5 border border-gray-200 dark:border-white/10 text-gray-900 dark:text-white placeholder:text-gray-400 dark:placeholder:text-white/25 px-3 py-2 text-sm resize-none focus:outline-none focus:border-amber-500/40"
+                  />
+                </div>
+
+                {/* Core Tension */}
+                <div>
+                  <label className="block text-xs font-medium text-gray-500 dark:text-white/60 mb-1.5">
+                    Core Tension{" "}
+                    <span className="text-amber-500/60 dark:text-amber-400/50 font-normal">
+                      — the central "why" question
+                    </span>
+                  </label>
+                  <textarea
+                    value={coreTension}
+                    onChange={(e) => setCoreTension(e.target.value)}
+                    rows={2}
+                    placeholder="What confusion, paradox, or structural question should this animation resolve?"
+                    className="w-full rounded-lg bg-gray-50 dark:bg-white/5 border border-gray-200 dark:border-white/10 text-gray-900 dark:text-white placeholder:text-gray-400 dark:placeholder:text-white/25 px-3 py-2 text-sm resize-none focus:outline-none focus:border-amber-500/40"
+                  />
+                </div>
+
+                {/* Compression Goal */}
+                <div>
+                  <label className="block text-xs font-medium text-gray-500 dark:text-white/60 mb-1.5">
+                    Compression Goal{" "}
+                    <span className="text-amber-500/60 dark:text-amber-400/50 font-normal">
+                      — the "aha" feeling
+                    </span>
+                  </label>
+                  <textarea
+                    value={compressionGoal}
+                    onChange={(e) => setCompressionGoal(e.target.value)}
+                    rows={2}
+                    placeholder="At the end, the learner should feel: ____"
                     className="w-full rounded-lg bg-gray-50 dark:bg-white/5 border border-gray-200 dark:border-white/10 text-gray-900 dark:text-white placeholder:text-gray-400 dark:placeholder:text-white/25 px-3 py-2 text-sm resize-none focus:outline-none focus:border-amber-500/40"
                   />
                 </div>
@@ -431,6 +522,29 @@ const AnimationBlueprintWizard: FC<AnimationBlueprintWizardProps> = ({
                   </div>
                 )}
 
+                {/* Reveal Strategy */}
+                <div>
+                  <label className="block text-xs font-medium text-gray-500 dark:text-white/60 mb-2">
+                    Reveal Strategy
+                  </label>
+                  <div className="space-y-1.5">
+                    {REVEAL_STRATEGIES.map((rs) => (
+                      <button
+                        key={rs.value}
+                        onClick={() => setRevealStrategy(rs.value)}
+                        className={`w-full flex flex-col items-start p-2.5 rounded-lg text-left transition ${
+                          revealStrategy === rs.value
+                            ? "bg-amber-50 dark:bg-amber-500/15 border border-amber-400 dark:border-amber-500/40 text-amber-700 dark:text-amber-300"
+                            : "bg-gray-50 dark:bg-white/5 border border-gray-200 dark:border-white/10 text-gray-500 dark:text-white/50 hover:bg-gray-100 dark:hover:bg-white/10"
+                        }`}
+                      >
+                        <div className="text-sm font-medium">{rs.label}</div>
+                        <div className="text-xs opacity-60">{rs.desc}</div>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
                 {/* Summary Preview */}
                 <div className="rounded-xl bg-gray-50 dark:bg-white/5 border border-gray-200 dark:border-white/10 p-4 space-y-2">
                   <h3 className="text-sm font-semibold text-gray-700 dark:text-white/80">
@@ -473,8 +587,20 @@ const AnimationBlueprintWizard: FC<AnimationBlueprintWizardProps> = ({
                     <span className="text-gray-700 dark:text-white/80">
                       {sceneCount}
                     </span>
+                    <span className="text-gray-400 dark:text-white/40">
+                      Reveal
+                    </span>
+                    <span className="text-gray-700 dark:text-white/80 capitalize">
+                      {revealStrategy.replace(/_/g, " ")}
+                    </span>
                   </div>
-                  <p className="text-xs text-gray-400 dark:text-white/40 mt-2 line-clamp-2">
+                  {coreTension && (
+                    <p className="text-xs text-amber-600/70 dark:text-amber-400/50 mt-2 line-clamp-1">
+                      <span className="font-medium">Tension:</span>{" "}
+                      {coreTension}
+                    </p>
+                  )}
+                  <p className="text-xs text-gray-400 dark:text-white/40 mt-1 line-clamp-2">
                     {conceptDescription || "No description yet."}
                   </p>
                 </div>

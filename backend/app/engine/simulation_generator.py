@@ -16,31 +16,17 @@ import uuid
 from typing import Any, Dict, List, Optional
 
 import httpx
-from pymongo import MongoClient
+
+from app.config import AZURE_OPENAI_ENDPOINT, AZURE_OPENAI_API_KEY
+from app.database import get_db
 
 logger = logging.getLogger(__name__)
 
-# ── Config ────────────────────────────────────────────────────────────────
-
-MONGO_URI = os.getenv("MONGO_URI", "mongodb://localhost:27017")
-MONGO_DB = os.getenv("MONGO_DB", "eureka")
-
-_mongo: Optional[MongoClient] = None
+# ── Config (centralised in app.config / app.database) ─────────────────────
 
 
 def _db():
-    global _mongo
-    if _mongo is None:
-        _mongo = MongoClient(MONGO_URI)
-    return _mongo[MONGO_DB]
-
-
-def _get_azure_endpoint():
-    return os.getenv("AZURE_OPENAI_ENDPOINT", "")
-
-
-def _get_azure_key():
-    return os.getenv("AZURE_OPENAI_API_KEY", "")
+    return get_db()
 
 
 # ── GPT-5.2 Call ──────────────────────────────────────────────────────────
@@ -48,8 +34,8 @@ def _get_azure_key():
 
 async def _call_gpt(prompt: str, system: str | None = None, max_tokens: int = 4000) -> Dict:
     """Call Azure OpenAI GPT-5.2 and return parsed JSON."""
-    endpoint = _get_azure_endpoint()
-    key = _get_azure_key()
+    endpoint = AZURE_OPENAI_ENDPOINT
+    key = AZURE_OPENAI_API_KEY
 
     if not endpoint or not key:
         raise ValueError("Azure OpenAI credentials not configured")
@@ -95,10 +81,11 @@ def _build_engine_prompt(blueprint: Dict) -> str:
     variables_text = ""
     for v in blueprint.get("variables", []):
         role = "INPUT (student-adjustable)" if v.get("is_input") else "COMPUTED"
+        color_hint = f", color: {v['color']}" if v.get("color") else ""
         variables_text += (
             f"  - {v['name']} ({v['symbol']}): "
             f"range [{v['min']}, {v['max']}], default {v['default_value']}, "
-            f"step {v['step']}, unit: {v['unit']}, role: {role}\n"
+            f"step {v['step']}, unit: {v['unit']}, role: {role}{color_hint}\n"
         )
 
     renderer_type = blueprint.get("renderer_type", "graph")
@@ -201,6 +188,22 @@ def _get_renderer_instructions(renderer_type: str) -> str:
 - show_eigenvectors: true (when eigenvalues are real)
 - tracked_points: key points to follow through transform
 - original_color: "#94a3b8", transformed_color: "#3b82f6" """,
+        "bars": """RENDERER CONFIG (Bar Chart):
+- x_axis: label for the category/group axis
+- y_axis: {variable (computed expression), label, unit, range: [min, max]}
+- bars: array of {id, label, value_expression (mathjs using variable symbols), color}
+- show_values: true — display numeric value on top of each bar
+- animate_on_change: true — bars animate height when input variables change
+- Use hex colors that contrast well on a dark background
+- Best for: fraction walls, comparative quantities, histograms, distributions""",
+        "phase_plot": """RENDERER CONFIG (Phase Plot / Phase Plane):
+- x_axis: {variable: symbol, label, unit, range: [min, max]}
+- y_axis: {variable: symbol, label, unit, range: [min, max]}
+- trajectory: {color, max_points: 500, trail_opacity: 0.7} — trace the (x, y) path over time
+- show_nullclines: false — set true to draw dx/dt=0 and dy/dt=0 curves
+- show_equilibrium_points: true — mark fixed points of the system
+- time_axis: optional third variable to animate evolution speed
+- Best for: oscillators, pendulums, dynamical systems, limit cycles""",
     }
     return instructions.get(renderer_type, instructions["graph"])
 
@@ -214,6 +217,8 @@ def _get_renderer_config_schema(renderer_type: str) -> str:
         "vector_field": '{"type":"vector_field","field":{"fx":"expr","fy":"expr"},"resolution":20,"bounds":{"x":[-5,5],"y":[-5,5]},"color_mode":"magnitude","normalize":false,"show_grid":true}',
         "circuit_diagram": '{"type":"circuit_diagram","components":[{"id":"c1","type":"battery","label":"V1","value":"9V","position":{"row":0,"col":0},"rotation":0,"connections":["n1","n2"]}],"grid":{"rows":4,"cols":4},"computed_values":[{"component_id":"c1","voltage":"9","current":"I_total"}],"animate_current":true}',
         "grid_transform": '{"type":"grid_transform","matrix_expression":"[[a,b],[c,d]]","bounds":{"x":[-5,5],"y":[-5,5]},"grid_lines":15,"show_basis_vectors":true,"show_eigenvectors":true,"tracked_points":[],"original_color":"#94a3b8","transformed_color":"#3b82f6"}',
+        "bars": '{"type":"bars","x_axis":{"label":"Category"},"y_axis":{"variable":"...","label":"...","unit":"...","range":[0,100]},"bars":[{"id":"b1","label":"...","value_expression":"...","color":"#3b82f6"}],"show_values":true,"animate_on_change":true}',
+        "phase_plot": '{"type":"phase_plot","x_axis":{"variable":"...","label":"...","unit":"...","range":[-2,2]},"y_axis":{"variable":"...","label":"...","unit":"...","range":[-2,2]},"trajectory":{"color":"#8b5cf6","max_points":500,"trail_opacity":0.7},"show_nullclines":false,"show_equilibrium_points":true}',
     }
     return schemas.get(renderer_type, schemas["graph"])
 

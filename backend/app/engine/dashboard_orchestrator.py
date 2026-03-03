@@ -27,8 +27,9 @@ from typing import AsyncGenerator, Dict, List, Optional
 logger = logging.getLogger(__name__)
 
 import httpx
-from pymongo import MongoClient
 
+from app.config import AZURE_OPENAI_ENDPOINT, AZURE_OPENAI_API_KEY
+from app.database import get_db
 from app.engine.dashboard_prompt import build_dashboard_system_prompt
 from app.engine.dashboard_classifier import classify_message
 from app.engine.dashboard_cognitive import (
@@ -59,27 +60,11 @@ from app.engine.dignity_scorer import dignity_scorer, log_dignity_score
 from app.engine.confusion_handler import detect_confusion, build_confusion_system_injection
 
 
-# ── Config ────────────────────────────────────────────────────────────────
-
-def _get_azure_endpoint():
-    return os.getenv("AZURE_OPENAI_ENDPOINT", "")
-
-
-def _get_azure_key():
-    return os.getenv("AZURE_OPENAI_API_KEY", "")
-
-
-MONGO_URI = os.getenv("MONGO_URI", "mongodb://localhost:27017")
-MONGO_DB = os.getenv("MONGO_DB", "eureka")
-
-_mongo: Optional[MongoClient] = None
+# ── Config (centralised in app.config / app.database) ─────────────────────
 
 
 def _db():
-    global _mongo
-    if _mongo is None:
-        _mongo = MongoClient(MONGO_URI)
-    return _mongo[MONGO_DB]
+    return get_db()
 
 
 # ── Conversation Persistence ─────────────────────────────────────────────
@@ -377,7 +362,7 @@ class DashboardOrchestrator:
             full_response = ""
             util_filter = StreamingDignityFilter()
             try:
-                endpoint = _get_azure_endpoint()
+                endpoint = AZURE_OPENAI_ENDPOINT
                 payload = {
                     "messages": gpt_messages,
                     "max_completion_tokens": 1000,
@@ -392,7 +377,7 @@ class DashboardOrchestrator:
                         endpoint,
                         json=payload,
                         headers={
-                            "api-key": _get_azure_key(),
+                            "api-key": AZURE_OPENAI_API_KEY,
                             "Content-Type": "application/json",
                         },
                     ) as resp:
@@ -586,7 +571,7 @@ class DashboardOrchestrator:
         streaming_filter = StreamingDignityFilter()  # sentence-buffered filter
 
         try:
-            endpoint = _get_azure_endpoint()
+            endpoint = AZURE_OPENAI_ENDPOINT
             payload = {
                 "messages": gpt_messages,
                 "max_completion_tokens": 10000,
@@ -599,7 +584,7 @@ class DashboardOrchestrator:
                     endpoint,
                     json=payload,
                     headers={
-                        "api-key": _get_azure_key(),
+                        "api-key": AZURE_OPENAI_API_KEY,
                         "Content-Type": "application/json",
                     },
                 ) as resp:

@@ -22,8 +22,9 @@ from typing import AsyncGenerator, Dict, List, Optional
 logger = logging.getLogger(__name__)
 
 import httpx
-from pymongo import MongoClient
 
+from app.config import AZURE_OPENAI_ENDPOINT, AZURE_OPENAI_API_KEY
+from app.database import get_db
 from app.engine.intent_classifier import IntentType, classify_intent, analyse_response_quality
 from app.engine.misconception_engine import MisconceptionDetector, MicroQController
 from app.engine.teaching_prompt import build_teaching_system_prompt
@@ -38,27 +39,14 @@ from app.engine.dignity_scorer import dignity_scorer, log_dignity_score
 from app.knowledge.motion_forces import get_node_knowledge, NODE_ID_MAP
 
 
-# ── Config ────────────────────────────────────────────────────────────────
-
-def _get_azure_endpoint():
-    return os.getenv("AZURE_OPENAI_ENDPOINT", "")
-
-def _get_azure_key():
-    return os.getenv("AZURE_OPENAI_API_KEY", "")
-
-MONGO_URI = os.getenv("MONGO_URI", "mongodb://localhost:27017")
-MONGO_DB = os.getenv("MONGO_DB", "eureka")
-
-# Singleton MongoDB client
-_mongo: Optional[MongoClient] = None
+# ── Config (centralised in app.config / app.database) ─────────────────────
 
 
 def _db():
-    global _mongo
-    if _mongo is None:
-        _mongo = MongoClient(MONGO_URI)
-    return _mongo[MONGO_DB]
+    return get_db()
 
+
+# Singleton MongoDB client
 
 # ── User Learning State ──────────────────────────────────────────────────
 
@@ -409,7 +397,7 @@ class TeachingOrchestrator:
 
         try:
             # Use streaming endpoint
-            stream_endpoint = _get_azure_endpoint()
+            stream_endpoint = AZURE_OPENAI_ENDPOINT
             payload = {
                 "messages": messages,
                 "max_completion_tokens": 6000,
@@ -422,7 +410,7 @@ class TeachingOrchestrator:
                     stream_endpoint,
                     json=payload,
                     headers={
-                        "api-key": _get_azure_key(),
+                        "api-key": AZURE_OPENAI_API_KEY,
                         "Content-Type": "application/json",
                     },
                 ) as resp:

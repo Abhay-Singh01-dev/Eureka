@@ -30,6 +30,8 @@ import type {
   VisualType,
   NarrationType,
   GeneratedSceneContent,
+  SceneRole,
+  RevealPace,
 } from "@/types/animation";
 
 // ── Visual type options with icons ──
@@ -90,6 +92,29 @@ const NARRATION_TYPES: { value: NarrationType; label: string }[] = [
   { value: "silent", label: "No Narration" },
 ];
 
+const SCENE_ROLES: { value: SceneRole; label: string; emoji: string }[] = [
+  { value: "introduce_tension", label: "Introduce Tension", emoji: "⚡" },
+  { value: "build_structure", label: "Build Structure", emoji: "🧱" },
+  { value: "show_counterexample", label: "Show Counterexample", emoji: "❌" },
+  { value: "reveal_constraint", label: "Reveal Constraint", emoji: "🔒" },
+  { value: "formalize_equation", label: "Formalize Equation", emoji: "∑" },
+  { value: "generalize", label: "Generalize", emoji: "🌐" },
+  { value: "compress_insight", label: "Compress Insight", emoji: "💡" },
+  { value: "recap", label: "Recap", emoji: "🔁" },
+  { value: "highlight_invariant", label: "Highlight Invariant", emoji: "🔷" },
+  {
+    value: "translate_representation",
+    label: "Translate Representation",
+    emoji: "🔄",
+  },
+];
+
+const REVEAL_PACES: { value: RevealPace; label: string; desc: string }[] = [
+  { value: "fast", label: "Fast Reveal", desc: "Minimal pause, direct" },
+  { value: "moderate", label: "Moderate Build", desc: "Balanced pacing" },
+  { value: "slow", label: "Slow Tension", desc: "Deliberate build-up" },
+];
+
 // ── Props ──
 
 interface SceneDesignerProps {
@@ -120,15 +145,43 @@ const SceneDesigner: FC<SceneDesignerProps> = ({
     [scene, sceneIndex, onUpdateScene],
   );
 
-  /** Auto-fill description from blueprint if empty, then generate */
-  const handleGenerateWithAI = useCallback(async () => {
+  /** Auto-fill description + highlight_focus + scene_role from blueprint context (no generation) */
+  const handleGenerateWithAI = useCallback(() => {
+    const patch: Partial<AnimationScene> = {};
+
     if (!scene.description.trim()) {
-      // Auto-fill description from blueprint concept
-      const autoDesc = `Scene ${sceneIndex + 1}: ${blueprint.concept_description.slice(0, 200)}`;
-      onUpdateScene(sceneIndex, { ...scene, description: autoDesc });
+      patch.description = `Scene ${sceneIndex + 1}: ${blueprint.concept_description.slice(0, 200)}`;
     }
-    onGenerateContent(sceneIndex);
-  }, [scene, sceneIndex, blueprint, onUpdateScene, onGenerateContent]);
+
+    if (!scene.highlight_focus?.trim()) {
+      const focusDefaults: Record<string, string> = {
+        "2d_graph": "the plotted curve and axis labels",
+        "2d_diagram": "the labeled components",
+        text_reveal: "the key terms as they appear",
+        equation_reveal: "the derived expression",
+        vector_field: "the direction arrows",
+        particle_motion: "particle trajectory paths",
+        wave_propagation: "wavefronts and interference pattern",
+        circuit_flow: "current direction indicators",
+        custom_drawing: "the main drawn shape",
+        grid_transformation: "the transformed grid lines",
+      };
+      patch.highlight_focus =
+        focusDefaults[scene.visual_type] ?? "the main concept";
+    }
+
+    // Auto-assign scene role if not set
+    if (!scene.scene_role) {
+      if (sceneIndex === 0) patch.scene_role = "introduce_tension";
+      else if (sceneIndex === totalScenes - 1)
+        patch.scene_role = "compress_insight";
+      else patch.scene_role = "build_structure";
+    }
+
+    if (Object.keys(patch).length > 0) {
+      onUpdateScene(sceneIndex, { ...scene, ...patch });
+    }
+  }, [scene, sceneIndex, totalScenes, blueprint, onUpdateScene]);
 
   const hasContent = !!(
     scene.generated_content &&
@@ -204,6 +257,29 @@ const SceneDesigner: FC<SceneDesignerProps> = ({
                 </div>
               </div>
 
+              {/* Scene Role */}
+              <div>
+                <label className="flex items-center gap-1.5 text-xs font-medium text-gray-500 dark:text-white/60 mb-2">
+                  <Focus className="w-3.5 h-3.5" /> Scene Purpose
+                </label>
+                <div className="flex flex-wrap gap-1.5">
+                  {SCENE_ROLES.map((sr) => (
+                    <button
+                      key={sr.value}
+                      onClick={() => update({ scene_role: sr.value })}
+                      className={`flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs transition ${
+                        scene.scene_role === sr.value
+                          ? "bg-amber-100 dark:bg-amber-500/20 text-amber-700 dark:text-amber-300 border border-amber-400 dark:border-amber-500/40"
+                          : "bg-gray-50 dark:bg-white/5 text-gray-500 dark:text-white/40 border border-gray-200 dark:border-white/10 hover:bg-gray-100 dark:hover:bg-white/10"
+                      }`}
+                    >
+                      <span>{sr.emoji}</span>
+                      <span className="font-medium">{sr.label}</span>
+                    </button>
+                  ))}
+                </div>
+              </div>
+
               {/* Description */}
               <div>
                 <label className="flex items-center gap-1.5 text-xs font-medium text-gray-500 dark:text-white/60 mb-1.5">
@@ -218,21 +294,11 @@ const SceneDesigner: FC<SceneDesignerProps> = ({
                 />
                 <Button
                   size="sm"
-                  disabled={isGenerating}
                   onClick={handleGenerateWithAI}
                   className="mt-1.5 text-xs h-8 bg-amber-50 dark:bg-amber-500/10 border border-amber-400 dark:border-amber-500/40 text-amber-600 dark:text-amber-400 hover:bg-amber-100 dark:hover:bg-amber-500/20"
                 >
-                  {isGenerating ? (
-                    <>
-                      <Loader2 className="w-3.5 h-3.5 mr-1.5 animate-spin" />
-                      Generating…
-                    </>
-                  ) : (
-                    <>
-                      <Sparkles className="w-3.5 h-3.5 mr-1.5" />
-                      Generate with AI
-                    </>
-                  )}
+                  <Sparkles className="w-3.5 h-3.5 mr-1.5" />
+                  Generate with AI
                 </Button>
               </div>
 
@@ -263,16 +329,41 @@ const SceneDesigner: FC<SceneDesignerProps> = ({
 
                 <div>
                   <label className="flex items-center gap-1.5 text-xs font-medium text-gray-500 dark:text-white/60 mb-1.5">
-                    <Focus className="w-3.5 h-3.5" /> Highlight Focus
+                    <Focus className="w-3.5 h-3.5" /> Key Constraint or Insight
                   </label>
                   <Input
                     value={scene.highlight_focus ?? ""}
                     onChange={(e) =>
                       update({ highlight_focus: e.target.value || undefined })
                     }
-                    placeholder="e.g. the peak of the curve"
+                    placeholder="What structural idea must become clear in this scene?"
                     className="bg-gray-50 dark:bg-white/5 border-gray-200 dark:border-white/10 text-gray-900 dark:text-white placeholder:text-gray-400 dark:placeholder:text-white/25 text-sm"
                   />
+                </div>
+              </div>
+
+              {/* Reveal Pace */}
+              <div>
+                <label className="flex items-center gap-1.5 text-xs font-medium text-gray-500 dark:text-white/60 mb-1.5">
+                  <Clock className="w-3.5 h-3.5" /> Reveal Pace
+                </label>
+                <div className="flex gap-2">
+                  {REVEAL_PACES.map((rp) => (
+                    <button
+                      key={rp.value}
+                      onClick={() => update({ reveal_pace: rp.value })}
+                      className={`flex-1 px-2.5 py-1.5 rounded-lg text-xs text-center transition ${
+                        (scene.reveal_pace ?? "moderate") === rp.value
+                          ? "bg-amber-100 dark:bg-amber-500/20 text-amber-700 dark:text-amber-300 border border-amber-400 dark:border-amber-500/40"
+                          : "bg-gray-50 dark:bg-white/5 text-gray-500 dark:text-white/40 border border-gray-200 dark:border-white/10 hover:bg-gray-100 dark:hover:bg-white/10"
+                      }`}
+                    >
+                      <div className="font-medium">{rp.label}</div>
+                      <div className="opacity-60 text-[10px] mt-0.5">
+                        {rp.desc}
+                      </div>
+                    </button>
+                  ))}
                 </div>
               </div>
 
@@ -316,13 +407,31 @@ const SceneDesigner: FC<SceneDesignerProps> = ({
                 </div>
               )}
 
-              {/* Status */}
-              <div className="flex items-center pt-1">
+              {/* Generate button + Status */}
+              <div className="flex items-center justify-between pt-1 gap-3">
                 <div className="text-[10px] text-gray-400 dark:text-white/30">
                   {hasContent
                     ? `✓ ${scene.generated_content!.key_visual_elements?.length ?? 0} visual elements, ${scene.generated_content!.manim_sequence?.length ?? 0} instructions`
                     : "No content generated yet"}
                 </div>
+                <Button
+                  size="sm"
+                  disabled={isGenerating}
+                  onClick={() => onGenerateContent(sceneIndex)}
+                  className="shrink-0 text-xs h-8 bg-amber-500 hover:bg-amber-600 dark:bg-amber-500/80 dark:hover:bg-amber-500 text-white border-0 shadow-sm"
+                >
+                  {isGenerating ? (
+                    <>
+                      <Loader2 className="w-3.5 h-3.5 mr-1.5 animate-spin" />
+                      Generating…
+                    </>
+                  ) : (
+                    <>
+                      <Sparkles className="w-3.5 h-3.5 mr-1.5" />
+                      Generate
+                    </>
+                  )}
+                </Button>
               </div>
             </div>
           </motion.div>

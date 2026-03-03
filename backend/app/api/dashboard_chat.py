@@ -11,12 +11,15 @@ Endpoints:
 """
 
 import json
+import logging
 import uuid
 from typing import List, Optional
 
 from fastapi import APIRouter, Query, Path
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel
+
+logger = logging.getLogger(__name__)
 
 from app.engine.dashboard_orchestrator import (
     DashboardOrchestrator,
@@ -107,7 +110,7 @@ def _build_stream_response(
             async for event in orchestrator.process_message(message, hist, images=images):
                 yield _sse_event(event)
         except Exception as exc:
-            print(f"[dashboard/stream] Error: {exc}")
+            logger.error("[dashboard/stream] Error: %s", exc)
             yield _sse_event({"type": "error", "content": str(exc)})
 
     return StreamingResponse(

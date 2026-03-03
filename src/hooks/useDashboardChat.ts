@@ -83,8 +83,8 @@ export function useDashboardChat({
   }, []);
 
   /**
-   * drainOnce — consume characters from the pending queue at ~33 chars/sec
-   * (setTimeout 30 ms) for a natural, well-paced streaming feel.
+   * drainOnce — consume characters from the pending queue at ~67 chars/sec
+   * (setTimeout 15 ms) for a natural, well-paced streaming feel.
    */
   const drainOnce = useCallback(() => {
     if (pendingQueueRef.current.length === 0) {
@@ -117,7 +117,7 @@ export function useDashboardChat({
       ),
     );
 
-    rafRef.current = window.setTimeout(drainOnce, 30) as unknown as number;
+    rafRef.current = window.setTimeout(drainOnce, 15) as unknown as number;
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -259,7 +259,7 @@ export function useDashboardChat({
                     if (!rafRef.current) {
                       rafRef.current = window.setTimeout(
                         drainOnce,
-                        30,
+                        15,
                       ) as unknown as number;
                     }
                   }
@@ -430,7 +430,7 @@ export function useDashboardChat({
                   if (!rafRef.current) {
                     rafRef.current = window.setTimeout(
                       drainOnce,
-                      30,
+                      15,
                     ) as unknown as number;
                   }
                   break;
@@ -440,7 +440,7 @@ export function useDashboardChat({
                   if (!rafRef.current) {
                     rafRef.current = window.setTimeout(
                       drainOnce,
-                      30,
+                      15,
                     ) as unknown as number;
                   }
                   break;
@@ -457,7 +457,7 @@ export function useDashboardChat({
           if (!rafRef.current) {
             rafRef.current = window.setTimeout(
               drainOnce,
-              30,
+              15,
             ) as unknown as number;
           }
         }
@@ -467,7 +467,7 @@ export function useDashboardChat({
           if (!rafRef.current) {
             rafRef.current = window.setTimeout(
               drainOnce,
-              30,
+              15,
             ) as unknown as number;
           }
         } else {

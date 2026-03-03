@@ -28,6 +28,29 @@ export type SceneStructure =
   | "step_reveal"
   | "before_after";
 
+export type RevealStrategy =
+  | "gradual_constraint_build"
+  | "counterexample_resolution"
+  | "intuition_formalization"
+  | "visual_first_equation_later"
+  | "equation_first_geometric"
+  | "direct_demonstration"
+  | "comparative_contrast";
+
+export type SceneRole =
+  | "introduce_tension"
+  | "build_structure"
+  | "show_counterexample"
+  | "reveal_constraint"
+  | "formalize_equation"
+  | "generalize"
+  | "compress_insight"
+  | "recap"
+  | "highlight_invariant"
+  | "translate_representation";
+
+export type RevealPace = "fast" | "moderate" | "slow";
+
 export interface AnimationBlueprint {
   title: string;
   subject: AnimationSubject;
@@ -38,6 +61,12 @@ export interface AnimationBlueprint {
   scene_structure: SceneStructure;
   /** 1 for single, 2–6 for multi */
   scene_count: number;
+  /** What confusion / paradox / structural question should this animation resolve? */
+  core_tension?: string;
+  /** What should feel inevitable at the end? */
+  compression_goal?: string;
+  /** How the revelation arc unfolds across scenes */
+  reveal_strategy?: RevealStrategy;
 }
 
 // ── Phase 2: Scene Configuration ─────────────────────────────
@@ -61,6 +90,10 @@ export interface AnimationScene {
   duration_seconds: number;
   highlight_focus?: string;
   narration_type: NarrationType;
+  /** Cognitive role of this scene in the animation arc */
+  scene_role?: SceneRole;
+  /** Controls equation timing, buildup density, narration pauses */
+  reveal_pace?: RevealPace;
   /** AI-generated or teacher-authored content */
   generated_content?: GeneratedSceneContent;
   /** Teacher-entered custom narration text */

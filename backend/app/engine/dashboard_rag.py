@@ -25,23 +25,20 @@ from __future__ import annotations
 from datetime import datetime, timezone
 from typing import Dict, List, Optional
 
-import os
-from pymongo import MongoClient, ASCENDING
+from pymongo import ASCENDING
 
-# ── MongoDB setup (lazy-loaded to avoid blocking at import time) ──────
+from app.database import get_db
 
-_client: Optional[MongoClient] = None
+# ── MongoDB setup (uses the centralised client from app.database) ───────
+
 _topic_graph = None
 
 
 def _get_topic_graph():
-    """Lazy-load MongoDB connection and ensure indexes exist."""
-    global _client, _topic_graph
+    """Lazy-load topic_graph collection and ensure indexes exist."""
+    global _topic_graph
     if _topic_graph is None:
-        _mongo_uri = os.getenv("MONGO_URI", "mongodb://localhost:27017")
-        _mongo_db = os.getenv("MONGO_DB", "eureka")
-        _client = MongoClient(_mongo_uri)
-        _topic_graph = _client[_mongo_db]["topic_graph"]
+        _topic_graph = get_db()["topic_graph"]
         # Ensure indexes (idempotent)
         _topic_graph.create_index([("topic", ASCENDING)])
         _topic_graph.create_index([("subtopic", ASCENDING)])

@@ -262,14 +262,27 @@ Teachers create Manim-style step-by-step animations through a 5-phase pipeline.
 
 ```
 Blueprint Wizard --> Scene Designer --> Timeline Editor
-                                            |
-                                            v
-                    Narration Layer --> Preview --> Publish
+       |                                      |
+  (Reveal Strategy,                    (Reorder, Resize,
+   Scene Roles,                         Add / Remove)
+   Cognitive Arc)                             |
+                                             v
+                         Narration Layer --> Preview --> Publish
+                                                |
+                                         (Cognitive Summary,
+                                          Inevitability Score,
+                                          Arc Validation)
 ```
 
 **Seven Animator Types:** Graph, Vector Field, Wave Propagation, Grid Transform, Particle Motion, Circuit Flow, Custom Drawing
 
-**Depth-gated narration:** Plain clarity at lower depths, conceptual elegance at higher depths.
+**Seven Reveal Strategies:** Gradual Constraint Build, Counterexample Resolution, Intuition Formalization, Visual First Equation Later, Equation First Geometric, Direct Demonstration, Comparative Contrast
+
+**Ten Scene Roles:** Introduce Tension, Build Structure, Show Counterexample, Reveal Constraint, Formalize Equation, Generalize, Compress Insight, Recap, Highlight Invariant, Translate Representation
+
+**Animation Cognitive Engine (ACE):** Full-pipeline generation path that treats all scenes as one cognitive arc — computes tension profile, builds structural arc, applies per-scene equation and strategy gating, and enforces six post-generation safety checks per scene.
+
+**Cognitive Summary:** Live preview-phase card showing tension profile, inevitability score, core invariant, misconception target, and arc-level structural suggestions.
 
 ---
 
@@ -303,6 +316,7 @@ Dignity enforcement is a multi-layer pipeline that processes every outgoing resp
 | KaTeX                | LaTeX math rendering            |
 | mathjs               | Runtime equation evaluation     |
 | Recharts             | Data visualization              |
+| Three.js             | 3D scene rendering              |
 
 ### Backend
 
@@ -349,12 +363,16 @@ eureka/
 │   │   ├── module/              # Module builder components
 │   │   ├── simulation/          # Simulation builder + renderers
 │   │   ├── animation/           # Animation builder + animators
+│   │   ├── visualizations/      # 3D orbit simulation, video player
 │   │   ├── screens/             # Learning screen components
 │   │   ├── sidebar/             # Navigation
+│   │   ├── providers/           # Theme and context providers
 │   │   └── ui/                  # Base UI primitives
 │   ├── hooks/                   # React hooks (streaming, CRUD, TTS)
 │   ├── types/                   # TypeScript type definitions
-│   └── lib/                     # Utilities
+│   ├── data/                    # Static knowledge and config data
+│   ├── utils/                   # Shared utility functions
+│   └── lib/                     # Auth, query client, routing utilities
 ├── package.json
 ├── vite.config.js
 └── tsconfig.json

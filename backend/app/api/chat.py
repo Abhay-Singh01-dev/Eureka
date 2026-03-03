@@ -8,11 +8,14 @@ Endpoints:
 """
 
 import json
+import logging
 import uuid
 
 from fastapi import APIRouter, Query
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel
+
+logger = logging.getLogger(__name__)
 
 from app.engine.teaching_orchestrator import (
     TeachingOrchestrator,
@@ -84,7 +87,7 @@ async def stream_chat(
             async for event in orchestrator.process_message(message, hist):
                 yield _sse_event(event)
         except Exception as exc:
-            print(f"[chat/stream] Error: {exc}")
+            logger.error("[chat/stream] Error: %s", exc)
             yield _sse_event({"type": "error", "content": str(exc)})
 
     return StreamingResponse(

@@ -12,8 +12,7 @@ from __future__ import annotations
 import time
 from typing import Any, Dict, List, Optional
 
-from pymongo import MongoClient
-import os
+from app.database import get_db
 
 
 # ── Scorer ────────────────────────────────────────────────────────────────
@@ -80,17 +79,9 @@ class DignityScorer:
 
 # ── Persistence ───────────────────────────────────────────────────────────
 
-MONGO_URI = os.getenv("MONGO_URI", "mongodb://localhost:27017")
-MONGO_DB = os.getenv("MONGO_DB", "eureka")
-
-_mongo: Optional[MongoClient] = None
-
 
 def _db():
-    global _mongo
-    if _mongo is None:
-        _mongo = MongoClient(MONGO_URI)
-    return _mongo[MONGO_DB]
+    return get_db()
 
 
 def log_dignity_score(

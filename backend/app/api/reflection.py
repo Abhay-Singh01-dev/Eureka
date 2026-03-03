@@ -6,17 +6,19 @@ POST /generate
   Returns: GPT-generated Eureka response tailored to the student's reflection
 """
 
+import logging
 import os
 import httpx
 from fastapi import APIRouter
 from pydantic import BaseModel
 
+from app.config import AZURE_OPENAI_ENDPOINT, AZURE_OPENAI_API_KEY
+
+logger = logging.getLogger(__name__)
+
 router = APIRouter()
 
-# ── Azure OpenAI config (loaded from .env) ───────────────────────────────
-
-AZURE_OPENAI_ENDPOINT = os.getenv("AZURE_OPENAI_ENDPOINT", "")
-AZURE_OPENAI_API_KEY = os.getenv("AZURE_OPENAI_API_KEY", "")
+# ── Azure OpenAI config (centralised in app.config) ──────────────────────
 
 # ── System prompt — defines Eureka's personality and pedagogical approach ─
 
@@ -96,7 +98,7 @@ async def generate_reflection_response(data: ReflectionRequest) -> ReflectionRes
     """Generate an adaptive reflection response using GPT-5.2-chat."""
 
     if not AZURE_OPENAI_ENDPOINT or not AZURE_OPENAI_API_KEY:
-        print("[reflection] Azure OpenAI not configured — using fallback")
+        logger.warning("Azure OpenAI not configured — using fallback")
         return ReflectionResponse(
             response=_fallback_response(data.reflection),
             source="fallback",
@@ -140,7 +142,7 @@ async def generate_reflection_response(data: ReflectionRequest) -> ReflectionRes
         return ReflectionResponse(response=gpt_text, source="gpt")
 
     except Exception as exc:
-        print(f"[reflection] GPT-5.2-chat call failed: {exc} — using fallback")
+        logger.error("GPT-5.2-chat call failed: %s — using fallback", exc)
         return ReflectionResponse(
             response=_fallback_response(data.reflection),
             source="fallback",

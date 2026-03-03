@@ -15,31 +15,17 @@ import uuid
 from typing import Any, Dict, List, Optional
 
 import httpx
-from pymongo import MongoClient
+
+from app.config import AZURE_OPENAI_ENDPOINT, AZURE_OPENAI_API_KEY
+from app.database import get_db
 
 logger = logging.getLogger(__name__)
 
-# ── Config ────────────────────────────────────────────────────────────────
-
-MONGO_URI = os.getenv("MONGO_URI", "mongodb://localhost:27017")
-MONGO_DB = os.getenv("MONGO_DB", "eureka")
-
-_mongo: Optional[MongoClient] = None
+# ── Config (centralised in app.config / app.database) ─────────────────────
 
 
 def _db():
-    global _mongo
-    if _mongo is None:
-        _mongo = MongoClient(MONGO_URI)
-    return _mongo[MONGO_DB]
-
-
-def _get_azure_endpoint():
-    return os.getenv("AZURE_OPENAI_ENDPOINT", "")
-
-
-def _get_azure_key():
-    return os.getenv("AZURE_OPENAI_API_KEY", "")
+    return get_db()
 
 
 # ── Graph Validation ─────────────────────────────────────────────────────
@@ -244,8 +230,8 @@ RESPOND WITH VALID JSON ONLY — no markdown, no explanation:
 
 async def _call_gpt(prompt: str) -> Dict:
     """Call Azure OpenAI GPT-5.2 for node graph generation."""
-    endpoint = _get_azure_endpoint()
-    key = _get_azure_key()
+    endpoint = AZURE_OPENAI_ENDPOINT
+    key = AZURE_OPENAI_API_KEY
 
     if not endpoint or not key:
         raise ValueError("Azure OpenAI credentials not configured")

@@ -29,6 +29,8 @@ from typing import Dict, Optional
 
 import httpx
 
+from app.config import AZURE_OPENAI_ENDPOINT, AZURE_OPENAI_API_KEY
+
 
 # ── Intent Types (broader than I'm Curious) ──────────────────────────────
 
@@ -382,8 +384,8 @@ async def gpt_classify(
 
     prompt = _CLASSIFIER_PROMPT.format(message=message[:500], context=context)
 
-    endpoint = os.getenv("AZURE_OPENAI_ENDPOINT", "")
-    api_key = os.getenv("AZURE_OPENAI_API_KEY", "")
+    endpoint = AZURE_OPENAI_ENDPOINT
+    api_key = AZURE_OPENAI_API_KEY
 
     if not endpoint or not api_key:
         # Fall back to rule-based if no credentials

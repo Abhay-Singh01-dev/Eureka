@@ -45,26 +45,14 @@ from __future__ import annotations
 from datetime import datetime, timezone
 from typing import Dict, List, Optional
 
-import os
-from pymongo import MongoClient
-
+from app.database import get_db
 from app.engine.dashboard_depth_controller import DepthController
 
-# ── MongoDB setup ────────────────────────────────────────────────────────
-
-_MONGO_URI = os.getenv("MONGO_URI", "mongodb://localhost:27017")
-_MONGO_DB = os.getenv("MONGO_DB", "eureka")
-_client: Optional[MongoClient] = None
-_db_ref = None
+# ── MongoDB setup (centralised) ────────────────────────────────────
 
 
 def _get_db():
-    """Lazy-load MongoDB connection to avoid blocking at import time."""
-    global _client, _db_ref
-    if _db_ref is None:
-        _client = MongoClient(_MONGO_URI)
-        _db_ref = _client[_MONGO_DB]
-    return _db_ref
+    return get_db()
 
 
 def _profiles():

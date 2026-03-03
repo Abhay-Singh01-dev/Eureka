@@ -17,19 +17,12 @@ import logging
 import httpx
 from typing import Optional
 
+from app.config import GOOGLE_AI_KEY, AZURE_OPENAI_ENDPOINT, AZURE_OPENAI_API_KEY
+
 logger = logging.getLogger(__name__)
 
 
-# ── Config ────────────────────────────────────────────────────────────────
-
-def _get_google_ai_key() -> str:
-    return os.getenv("GOOGLE_AI_KEY", "")
-
-def _get_azure_endpoint() -> str:
-    return os.getenv("AZURE_OPENAI_ENDPOINT", "")
-
-def _get_azure_key() -> str:
-    return os.getenv("AZURE_OPENAI_API_KEY", "")
+# ── Config (centralised in app.config) ─────────────────────────────
 
 IMAGEN_URL = (
     "https://generativelanguage.googleapis.com/v1beta/models/"
@@ -59,7 +52,7 @@ async def generate_image(description: str) -> Optional[dict]:
     Returns {"type": "image", "base64": "<data>", "mime": "image/png"}
     or None on failure.
     """
-    google_key = _get_google_ai_key()
+    google_key = GOOGLE_AI_KEY
     if not google_key:
         logger.warning("GOOGLE_AI_KEY not configured — skipping image gen")
         return None
@@ -132,7 +125,7 @@ async def generate_video(description: str) -> Optional[dict]:
     """
     import asyncio
 
-    google_key = _get_google_ai_key()
+    google_key = GOOGLE_AI_KEY
     if not google_key:
         logger.warning("GOOGLE_AI_KEY not configured — skipping video gen")
         return None
@@ -279,8 +272,8 @@ async def generate_quiz(
     difficulty: int = 2,
 ) -> Optional[dict]:
     """Generate conceptual quiz questions using GPT-5.2-chat."""
-    azure_endpoint = _get_azure_endpoint()
-    azure_key = _get_azure_key()
+    azure_endpoint = AZURE_OPENAI_ENDPOINT
+    azure_key = AZURE_OPENAI_API_KEY
     if not azure_endpoint or not azure_key:
         return None
 
@@ -350,8 +343,8 @@ Return ONLY valid JSON:
 
 async def generate_svg_diagram(concept: str, context: str) -> Optional[str]:
     """Generate an SVG diagram using GPT-5.2-chat. Returns SVG string."""
-    azure_endpoint = _get_azure_endpoint()
-    azure_key = _get_azure_key()
+    azure_endpoint = AZURE_OPENAI_ENDPOINT
+    azure_key = AZURE_OPENAI_API_KEY
     if not azure_endpoint or not azure_key:
         return None
 
